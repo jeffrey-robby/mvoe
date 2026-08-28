@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Option extends Model
 {
-    protected $fillable = ['question_id', 'libelle', 'pictogramme', 'est_attendue'];
+    protected $fillable = ['question_id', 'pictogramme', 'est_attendue'];
 
     // `est_attendue` sert a l'analyse du programme, jamais a l'affichage.
     // Il est masque par defaut pour qu'aucune serialisation ne le laisse
@@ -22,5 +22,18 @@ class Option extends Model
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class);
+    }
+
+    public function traductions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OptionTraduite::class);
+    }
+
+    public function libelle(\App\Enums\Langue $langue): ?string
+    {
+        $traduction = $this->traductions->firstWhere('langue', $langue)
+            ?? $this->traductions->firstWhere('langue', \App\Enums\Langue::Fr);
+
+        return $traduction?->libelle;
     }
 }

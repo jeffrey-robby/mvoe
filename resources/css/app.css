@@ -1,9 +1,282 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/*
+|------------------------------------------------------------------------------
+| Système de design Mvoé
+|------------------------------------------------------------------------------
+|
+| Trois couleurs, trois polices, une échelle généreuse. Rien d'autre.
+|
+| L'application sera lue en plein soleil, dans une salle sans électricité, par
+| quelqu'un qui tient son téléphone d'une main. Chaque décision ci-dessous vient
+| de là, pas d'un goût.
+|
+*/
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /*
+    | Palette. Jaune, blanc, noir — aucune quatrième couleur, y compris pour
+    | dire « erreur » ou « succès ». Un état se dit par une forme et un mot.
+    */
+    --color-noir: #121212; /* texte, surfaces pleines */
+    --color-jaune: #f5c518; /* action, état actif, accent — SURFACE UNIQUEMENT */
+    --color-jaune-sourd: #fdf3d0; /* fonds de rappel, zones calmes */
+    --color-blanc: #ffffff;
+    --color-ligne: #e4e4e4; /* bordures */
+    --color-gris-texte: #6b6b6b; /* texte secondaire uniquement */
+
+    /*
+    | Typographie.
+    |
+    | Archivo pour les titres et les intitulés de section.
+    | IBM Plex Sans pour le corps : il tient bien les diacritiques françaises.
+    | IBM Plex Mono pour tout ce qui se compte — chronomètres, compteurs,
+    | durées, effectifs. Ce n'est pas décoratif : l'application est un
+    | instrument de mesure, et des chiffres alignés se lisent d'un coup d'œil.
+    */
+    --font-titre: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+    --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+    /*
+    | Échelle. Le corps ne descend jamais sous 17 px.
+    | `xs` existe pour les mentions légales, et pour rien d'autre.
+    */
+    --text-xs: 0.8125rem; /* 13 px */
+    --text-sm: 0.9375rem; /* 15 px */
+    --text-base: 1.0625rem; /* 17 px — plancher du corps de texte */
+    --text-lg: 1.1875rem; /* 19 px */
+    --text-xl: 1.375rem; /* 22 px */
+    --text-2xl: 1.75rem; /* 28 px */
+    --text-3xl: 2.25rem; /* 36 px */
+    --text-4xl: 3rem; /* 48 px */
+    --text-5xl: 4rem; /* 64 px — chronomètre de séance */
+
+    /*
+    | Cible tactile minimale : 48 px. Ce n'est pas une application de bureau,
+    | et le doigt qui appuie tient peut-être un enfant de l'autre bras.
+    */
+    --spacing-tactile: 3rem;
+
+    --radius-net: 0.25rem;
+    --radius-carte: 0.5rem;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--color-blanc);
+        color: var(--color-noir);
+        font-family: var(--font-sans);
+        font-size: var(--text-base);
+        line-height: 1.55;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        font-family: var(--font-titre);
+        font-weight: 700;
+        line-height: 1.15;
+        text-wrap: balance;
+    }
+
+    /*
+    | Tous les chiffres sont tabulaires, partout, sans avoir à y penser :
+    | une colonne de durées ne doit pas danser quand un chiffre change.
+    */
+    :where(time, output, .chiffre) {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+    | Focus visible et épais. Le clavier et le lecteur d'écran sont des
+    | critères notés du concours, pas une option.
+    */
+    :focus-visible {
+        outline: 3px solid var(--color-noir);
+        outline-offset: 2px;
+    }
+
+    /* Sur une surface noire, le liseré noir serait invisible. */
+    .sur-noir :focus-visible,
+    .sur-noir:focus-visible {
+        outline-color: var(--color-blanc);
+    }
+
+    [hidden],
+    [x-cloak] {
+        display: none !important;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| Impression
+|------------------------------------------------------------------------------
+|
+| Le livrable du superviseur est un DOCUMENT : un rapport trimestriel imprimé,
+| signé, transmis. « Enregistrer en PDF » depuis le navigateur doit produire
+| quelque chose qu'on ose poser sur un bureau — pas une capture d'écran.
+|
+| Le jaune ne s'imprime pas : sur une imprimante monochrome de délégation, il
+| sortirait en gris pâle illisible. À l'impression, tout redevient noir sur
+| blanc, et les surfaces jaunes deviennent des encadrés au trait.
+|
+*/
+
+@media print {
+    @page {
+        size: A4;
+        margin: 16mm 14mm;
+    }
+
+    .sans-impression {
+        display: none !important;
+    }
+
+    body {
+        font-size: 10.5pt;
+        line-height: 1.4;
+    }
+
+    main {
+        max-width: none;
+        padding: 0;
+    }
+
+    /* Une ligne de tableau ne se coupe pas entre deux pages. */
+    tr,
+    .insecable {
+        break-inside: avoid;
+    }
+
+    h1,
+    h2 {
+        break-after: avoid;
+    }
+
+    /* Les fonds de rappel deviennent des encadrés : le jaune ne s'imprime pas. */
+    .bg-jaune,
+    .bg-jaune-sourd {
+        background: transparent !important;
+        border: 1px solid #121212;
+    }
+
+    a[href]::after {
+        content: '';
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| La colonne de séance
+|------------------------------------------------------------------------------
+|
+| L'élément signature du produit. Les trois états sont définis ICI et nulle part
+| ailleurs : le composant Blade et le template Alpine posent tous les deux un
+| `data-etat`, et n'ont donc aucune façon de diverger.
+|
+| La hauteur vient de `--minutes` : chaque séquence occupe une hauteur
+| proportionnelle à sa durée officielle. La colonne est une échelle, pas une
+| liste — le facilitateur y descend physiquement au fil de la séance.
+|
+*/
+
+@layer components {
+    .bloc-sequence {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-height: calc(var(--minutes, 10) * 0.42rem);
+        padding: 0.75rem;
+        border: 3px solid var(--color-noir);
+        border-radius: var(--radius-net);
+        background-color: var(--color-blanc);
+        color: var(--color-noir);
+        text-align: left;
+        width: 100%;
+    }
+
+    .bloc-sequence[data-etat='passee'] {
+        background-color: var(--color-noir);
+        color: var(--color-blanc);
+    }
+
+    .bloc-sequence[data-etat='en_cours'] {
+        background-color: var(--color-jaune);
+        color: var(--color-noir);
+    }
+
+    .bloc-sequence[data-etat='a_venir'] {
+        background-color: var(--color-blanc);
+        color: var(--color-noir);
+    }
+
+    /*
+    | Les états du pointage.
+    |
+    | Quatre états, mais TROIS COULEURS seulement : ce sont les formes qui
+    | portent la distinction, pas une palette élargie.
+    |
+    |     à pointer = contour pointillé   (rien n'a encore été dit)
+    |     présent   = pastille noire pleine
+    |     absent    = contour plein
+    |     binôme    = pastille jaune, marquée d'un trait de liaison
+    |
+    | Et jamais la couleur seule : chaque pastille porte aussi un libellé écrit.
+    */
+    .pastille {
+        display: block;
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 3px solid var(--color-noir);
+        border-radius: 9999px;
+        background-color: var(--color-blanc);
+    }
+
+    .pastille[data-etat='a_pointer'] {
+        border-style: dashed;
+        border-color: var(--color-gris-texte);
+    }
+
+    .pastille[data-etat='present'] {
+        background-color: var(--color-noir);
+    }
+
+    .pastille[data-etat='rattrape_binome'] {
+        background-color: var(--color-jaune);
+    }
+}
+
+/*
+| Intitulé court en capitales. Archivo n'étant chargé qu'en largeur normale,
+| l'effet « Expanded » du cahier des charges est obtenu par l'interlettrage —
+| approximation assumée, à remplacer si la variante Expanded est ajoutée.
+*/
+@utility intitule {
+    font-family: var(--font-titre);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+/*
+| Bande pleine du brise-glace : l'outil se retire, la salle prend le relais.
+| Aucun contrôle, aucun chronomètre. Cette rupture visuelle porte la doctrine
+| du projet — tout ne se numérise pas.
+*/
+@utility bande-brise-glace {
+    background-color: var(--color-jaune);
+    color: var(--color-noir);
+    font-family: var(--font-titre);
+    font-weight: 700;
 }

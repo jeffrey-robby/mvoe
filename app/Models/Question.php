@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Question extends Model
 {
-    protected $fillable = ['unite_id', 'enonce', 'enonce_audio', 'explication', 'ordre'];
+    protected $fillable = ['unite_id', 'ordre'];
 
     public function unite(): BelongsTo
     {
@@ -23,6 +23,24 @@ class Question extends Model
     public function options(): HasMany
     {
         return $this->hasMany(Option::class);
+    }
+
+    public function traductions(): HasMany
+    {
+        return $this->hasMany(QuestionTraduite::class);
+    }
+
+    /**
+     * Le texte dans la langue demandee, avec repli sur le francais.
+     *
+     * On renvoie la traduction reellement servie, pas un texte anonyme :
+     * l'ecran doit pouvoir dire au parent qu'il lit une version francaise
+     * plutot que de la faire passer pour du bulu.
+     */
+    public function traduction(\App\Enums\Langue $langue): ?QuestionTraduite
+    {
+        return $this->traductions->firstWhere('langue', $langue)
+            ?? $this->traductions->firstWhere('langue', \App\Enums\Langue::Fr);
     }
 
     public function reponsesAgregees(): HasMany

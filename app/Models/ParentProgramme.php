@@ -6,6 +6,7 @@ use App\Enums\Langue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * Table `parents`. Le modele ne peut pas s'appeler Parent : c'est un mot
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ParentProgramme extends Model
 {
+    use HasApiTokens;
+
     protected $table = 'parents';
 
     protected $fillable = [

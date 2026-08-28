@@ -52,6 +52,9 @@ class EcartDeclareObserveTest extends TestCase
         $facilitateur = \App\Models\Facilitateur::create([
             'nom' => 'Test',
             'telephone' => '600000000',
+            'code_appareil' => '123456',
+            'email' => 'test@minproff.cm',
+            'password' => 'mot-de-passe-de-test',
             'arrondissement' => 'Ebolowa II',
             'date_formation' => '2025-01-01',
         ]);

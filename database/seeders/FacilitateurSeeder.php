@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Facilitateur;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
  * Les quatorze facilitateurs formés du département de la Mvila, répartis sur
@@ -38,12 +39,40 @@ class FacilitateurSeeder extends Seeder
         ['Belinga Antoinette', '672 36 81 04', 'Efoulan', '2025-10-09', '2026-07-15'],
     ];
 
+    /**
+     * Deux voies d'entrée pour le même compte, avec les mêmes droits :
+     *
+     *   - téléphone + code d'appareil à 6 chiffres, remis en main propre à la
+     *     formation, pour ouvrir le kit sur le terrain ;
+     *   - e-mail + mot de passe, pour un accès depuis un poste de la délégation.
+     *
+     * Seul le compte de la cohorte de démonstration est documenté ici. Les
+     * identifiants des treize autres sont dérivés et ne sont écrits nulle part.
+     */
+    public const COMPTE_DEMO = [
+        'telephone' => '699 41 27 08',
+        'code_appareil' => '481207',
+        'email' => 'ndzana.etienne@minproff.cm',
+        'password' => 'mvoe-demo',
+    ];
+
     public function run(): void
     {
-        foreach (self::FACILITATEURS as [$nom, $telephone, $arrondissement, $formation, $activite]) {
+        foreach (self::FACILITATEURS as $rang => [$nom, $telephone, $arrondissement, $formation, $activite]) {
+            $estLeCompteDemo = $telephone === self::COMPTE_DEMO['telephone'];
+
             Facilitateur::create([
                 'nom' => $nom,
                 'telephone' => $telephone,
+                'code_appareil' => $estLeCompteDemo
+                    ? self::COMPTE_DEMO['code_appareil']
+                    : str_pad((string) (100000 + ($rang * 7919) % 899999), 6, '0', STR_PAD_LEFT),
+                'email' => $estLeCompteDemo
+                    ? self::COMPTE_DEMO['email']
+                    : Str::slug($nom, '.').'@minproff.cm',
+                'password' => $estLeCompteDemo
+                    ? self::COMPTE_DEMO['password']
+                    : Str::slug($nom).'-'.$rang,
                 'arrondissement' => $arrondissement,
                 'date_formation' => $formation,
                 'derniere_activite' => $activite,

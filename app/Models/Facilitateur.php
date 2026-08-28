@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * Seule entite nominative du systeme. Ce sont des agents publics :
@@ -11,13 +12,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Facilitateur extends Model
 {
-    protected $fillable = ['nom', 'telephone', 'arrondissement', 'date_formation', 'derniere_activite'];
+    use HasApiTokens;
+
+    protected $fillable = [
+        'nom', 'telephone', 'code_appareil', 'email', 'password',
+        'arrondissement', 'date_formation', 'derniere_activite',
+    ];
+
+    protected $hidden = ['code_appareil', 'password'];
 
     protected function casts(): array
     {
         return [
             'date_formation' => 'date',
             'derniere_activite' => 'date',
+            // Code d'appareil remis en main propre a la formation, jamais par SMS.
+            'code_appareil' => 'hashed',
+            'password' => 'hashed',
         ];
     }
 

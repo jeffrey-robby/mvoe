@@ -2,6 +2,64 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+/*
+|--------------------------------------------------------------------------
+| Le kit facilitateur
+|--------------------------------------------------------------------------
+|
+| Ces routes ne servent que des COQUILLES. Aucune donnee n'est rendue cote
+| serveur : le kit lit le paquet stocke en local et parle a l'API avec un
+| jeton, exactement comme le fera l'application Flutter. Le client Blade n'a
+| donc aucun privilege que Flutter n'aurait pas -- et c'est aussi ce qui rend
+| le fonctionnement hors ligne possible.
+|
+*/
+Route::view('/kit', 'kit.accueil')->name('kit.accueil');
+Route::view('/kit/connexion', 'kit.connexion')->name('kit.connexion');
+Route::view('/kit/seance', 'kit.seance')->name('kit.seance');
+Route::view('/kit/pointage', 'kit.pointage')->name('kit.pointage');
+Route::view('/kit/fidelite', 'kit.fidelite')->name('kit.fidelite');
+
+/*
+|--------------------------------------------------------------------------
+| L'espace parent
+|--------------------------------------------------------------------------
+|
+| Espace SECONDAIRE et optionnel : la majorite des parents du programme n'y
+| accedera jamais, et sera servie par la seance, le binome et la radio.
+|
+| `/parent/facilitateur` est volontairement accessible SANS COMPTE : quelqu'un
+| qui a besoin d'un contact humain ne doit pas d'abord se connecter.
+|
+*/
+Route::view('/parent', 'parent.entree')->name('parent.entree');
+Route::view('/parent/accueil', 'parent.accueil')->name('parent.accueil');
+Route::view('/parent/ecouter', 'parent.ecouter')->name('parent.ecouter');
+Route::view('/parent/feuilleton', 'parent.feuilleton')->name('parent.feuilleton');
+Route::view('/parent/question', 'parent.question')->name('parent.question');
+Route::view('/parent/questions', 'parent.questions')->name('parent.questions');
+Route::view('/parent/facilitateur', 'parent.facilitateur')->name('parent.facilitateur');
+
+/*
+|--------------------------------------------------------------------------
+| La delegation d'arrondissement
+|--------------------------------------------------------------------------
+|
+| Memes coquilles vides que le kit : les donnees viennent de l'API avec un
+| jeton. Ces ecrans ne fonctionnent PAS hors ligne, et c'est voulu -- le
+| livrable du superviseur est un document trimestriel, pas un outil de terrain.
+|
+*/
+Route::view('/superviseur', 'superviseur.registre')->name('superviseur.registre');
+Route::view('/superviseur/connexion', 'superviseur.connexion')->name('superviseur.connexion');
+Route::view('/superviseur/rapport', 'superviseur.rapport')->name('superviseur.rapport');
+Route::view('/superviseur/parametres', 'superviseur.parametres')->name('superviseur.parametres');
+
+/*
+| Page de demonstration du systeme de design. Elle n'est pas un ecran du
+| produit : elle sert a verifier tokens, typographie et composants au meme
+| endroit.
+*/
+Route::view('/design', 'design')->name('design');
+
+Route::get('/', fn () => redirect()->route('kit.accueil'));

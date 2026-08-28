@@ -4,26 +4,25 @@ namespace Database\Seeders;
 
 use App\Enums\StatutPresence;
 use App\Models\Cohorte;
-use App\Models\EvenementSync;
-use App\Models\FicheFidelite;
-use App\Models\Presence;
-use App\Models\Seance;
-use App\Models\Sequence;
-use App\Models\SequenceOuverte;
+use App\Services\ReceptionEvenements;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
- * Trois séances déjà tenues, remontées et projetées en base.
+ * Trois séances déjà tenues, rejouées exactement comme le kit les aurait
+ * remontées.
+ *
+ * Ce seeder n'écrit RIEN directement en base : il fabrique la file
+ * d'événements qu'un facilitateur hors ligne aurait accumulée, puis la passe
+ * à ReceptionEvenements. Il n'existe donc qu'un seul chemin d'écriture des
+ * données de séance, et le jeu de démonstration prouve que ce chemin marche.
  *
  * Chaque séance porte deux sources indépendantes :
  *   - l'OBSERVÉ (`sequences_ouvertes`), écrit passivement pendant la séance ;
  *   - le DÉCLARÉ (`fiches_fidelite`), saisi de mémoire après la séance.
  *
  * La deuxième séance présente un écart réel entre les deux, dans les deux sens.
- * C'est ce qu'aucun formulaire papier ne peut produire : le papier n'a qu'une
- * seule source, donc rien à confronter.
  *
  * Note sur les données de démonstration : les trois séances portent toutes sur
  * le module 8, seul module dont le déroulé est écrit. En production elles
@@ -102,50 +101,55 @@ class SeanceSeeder extends Seeder
         ],
     ];
 
-    public function run(): void
+    public function run(ReceptionEvenements $reception): void
     {
-        $cohorte = Cohorte::with('parents')->firstOrFail();
+        $cohorte = Cohorte::with('parents', 'facilitateur')->firstOrFail();
         $module = $cohorte->curriculumVersion->modules()->where('numero', 8)->firstOrFail();
         $sequences = $module->sequences()->ordonnees()->get()->keyBy('ordre');
 
         foreach (self::SEANCES as $donnees) {
-            $this->seance($cohorte, $module->id, $sequences, $donnees);
+            $bilan = $reception->recevoir(
+                $this->fileDEvenements($cohorte, $module->id, $sequences, $donnees),
+                $cohorte->facilitateur,
+                // Horodatage de réception d'origine : c'est lui qui donne au
+                // rapport ses délais de remontée de 2, 9 et 0 jours.
+                Carbon::parse($donnees['recue_a']),
+            );
+
+            if ($bilan['rejetes'] !== []) {
+                throw new \RuntimeException(
+                    'Séance de démonstration rejetée : '.json_encode($bilan['rejetes'])
+                );
+            }
         }
     }
 
-    private function seance(Cohorte $cohorte, int $moduleId, $sequences, array $donnees): void
+    /**
+     * La file exacte qu'un kit hors ligne aurait accumulée pendant et après la
+     * séance, dans l'ordre où les gestes ont eu lieu.
+     *
+     * @return array<int, array>
+     */
+    private function fileDEvenements(Cohorte $cohorte, int $moduleId, $sequences, array $donnees): array
     {
         // La séance commence à 15 h, comme toutes les séances du groupe du mardi.
         $debut = Carbon::parse($donnees['date'].' 15:00:00');
-        $recuA = Carbon::parse($donnees['recue_a']);
+        $seanceUuid = (string) Str::uuid();
 
-        $seance = Seance::create([
-            'uuid' => (string) Str::uuid(),
-            'cohorte_id' => $cohorte->id,
-            'module_id' => $moduleId,
-            'date' => $donnees['date'],
-            'facilitateur_id' => $cohorte->facilitateur_id,
-            'recue_a' => $recuA,
-        ]);
+        $file = [[
+            'uuid' => $seanceUuid,
+            'type' => 'seance',
+            'seance_uuid' => null,
+            'emis_a' => $debut->toIso8601String(),
+            'charge' => [
+                'cohorte_id' => $cohorte->id,
+                'module_id' => $moduleId,
+                'date' => $donnees['date'],
+            ],
+        ]];
 
-        $this->journaliser($seance, 'seance', $debut, $recuA, [
-            'cohorte_id' => $cohorte->id,
-            'module_id' => $moduleId,
-            'date' => $donnees['date'],
-        ]);
-
-        $this->pointage($seance, $cohorte, $donnees, $debut, $recuA);
-        $this->observe($seance, $sequences, $donnees, $debut, $recuA);
-        $this->declare($seance, $sequences, $donnees, $debut, $recuA);
-    }
-
-    /**
-     * Le pointage se fait pendant la séance, d'un geste par parent.
-     * Un parent rattrapé par son binôme a reçu la séance, autrement.
-     */
-    private function pointage(Seance $seance, Cohorte $cohorte, array $donnees, Carbon $debut, Carbon $recuA): void
-    {
-        $emisA = $debut->copy()->addMinutes(6);
+        // Le pointage, d'un geste par parent, en début de séance.
+        $pointeA = $debut->copy()->addMinutes(6);
 
         foreach ($cohorte->parents as $parent) {
             $statut = match (true) {
@@ -154,108 +158,58 @@ class SeanceSeeder extends Seeder
                 default => StatutPresence::Present,
             };
 
-            $uuid = (string) Str::uuid();
-
-            Presence::create([
-                'uuid' => $uuid,
-                'seance_id' => $seance->id,
-                'parent_id' => $parent->id,
-                'statut' => $statut,
-            ]);
-
-            $this->journaliser($seance, 'presence', $emisA, $recuA, [
-                'code_parent' => $parent->code_parent,
-                'statut' => $statut->value,
-            ], $uuid);
+            $file[] = [
+                'uuid' => (string) Str::uuid(),
+                'type' => 'presence',
+                'seance_uuid' => $seanceUuid,
+                'emis_a' => $pointeA->toIso8601String(),
+                'charge' => ['code_parent' => $parent->code_parent, 'statut' => $statut->value],
+            ];
         }
-    }
 
-    /**
-     * L'OBSERVÉ. Une ligne par ouverture réelle de séquence, écrite au moment
-     * où le facilitateur ouvre le bloc. Il ne déclare rien ici.
-     */
-    private function observe(Seance $seance, $sequences, array $donnees, Carbon $debut, Carbon $recuA): void
-    {
+        // L'OBSERVÉ : écrit au moment où le facilitateur ouvre chaque séquence.
         foreach ($donnees['ouvertures'] as $ordre => [$decalage, $duree]) {
             $ouverteA = $debut->copy()->addMinutes($decalage);
-            $uuid = (string) Str::uuid();
 
-            SequenceOuverte::create([
-                'uuid' => $uuid,
-                'seance_id' => $seance->id,
-                'sequence_id' => $sequences[$ordre]->id,
-                'ouverte_a' => $ouverteA,
-                'duree_reelle_secondes' => $duree,
-            ]);
-
-            $this->journaliser($seance, 'sequence_ouverte', $ouverteA, $recuA, [
-                'sequence_ordre' => $ordre,
-                'ouverte_a' => $ouverteA->toIso8601String(),
-                'duree_reelle_secondes' => $duree,
-            ], $uuid);
+            $file[] = [
+                'uuid' => (string) Str::uuid(),
+                'type' => 'sequence_ouverte',
+                'seance_uuid' => $seanceUuid,
+                'emis_a' => $ouverteA->toIso8601String(),
+                'charge' => [
+                    'sequence_id' => $sequences[$ordre]->id,
+                    'ouverte_a' => $ouverteA->toIso8601String(),
+                    'duree_reelle_secondes' => $duree,
+                ],
+            ];
         }
-    }
 
-    /**
-     * LE DÉCLARÉ. Rempli après la séance : une réponse par séquence, plus une
-     * ligne sans séquence qui porte le champ libre de fin de séance.
-     */
-    private function declare(Seance $seance, $sequences, array $donnees, Carbon $debut, Carbon $recuA): void
-    {
-        $emisA = $debut->copy()->addMinutes(100);
+        // LE DÉCLARÉ : rempli après la séance, jamais pendant.
+        $declareA = $debut->copy()->addMinutes(100);
 
         foreach ($donnees['declarations'] as $ordre => [$realisee, $note, $commentaire]) {
-            $uuid = (string) Str::uuid();
-
-            FicheFidelite::create([
-                'uuid' => $uuid,
-                'seance_id' => $seance->id,
-                'sequence_id' => $sequences[$ordre]->id,
-                'realisee_bool' => $realisee,
-                'note_qualite' => $note,
-                'commentaire' => $commentaire,
-            ]);
-
-            $this->journaliser($seance, 'fiche_fidelite', $emisA, $recuA, [
-                'sequence_ordre' => $ordre,
-                'realisee_bool' => $realisee,
-                'note_qualite' => $note,
-                'commentaire' => $commentaire,
-            ], $uuid);
+            $file[] = [
+                'uuid' => (string) Str::uuid(),
+                'type' => 'fiche_fidelite',
+                'seance_uuid' => $seanceUuid,
+                'emis_a' => $declareA->toIso8601String(),
+                'charge' => [
+                    'sequence_id' => $sequences[$ordre]->id,
+                    'realisee_bool' => $realisee,
+                    'note_qualite' => $note,
+                    'commentaire' => $commentaire,
+                ],
+            ];
         }
 
-        // « Qu'est-ce qui a le moins bien marché ? » — vaut pour toute la séance,
-        // d'où l'absence de séquence rattachée.
-        $uuid = (string) Str::uuid();
+        $file[] = [
+            'uuid' => (string) Str::uuid(),
+            'type' => 'bilan_seance',
+            'seance_uuid' => $seanceUuid,
+            'emis_a' => $declareA->toIso8601String(),
+            'charge' => ['commentaire' => $donnees['bilan']],
+        ];
 
-        FicheFidelite::create([
-            'uuid' => $uuid,
-            'seance_id' => $seance->id,
-            'sequence_id' => null,
-            'realisee_bool' => null,
-            'note_qualite' => null,
-            'commentaire' => $donnees['bilan'],
-        ]);
-
-        $this->journaliser($seance, 'bilan_seance', $emisA, $recuA, [
-            'commentaire' => $donnees['bilan'],
-        ], $uuid);
-    }
-
-    /**
-     * Chaque écriture est doublée d'un événement dans le journal de remontée.
-     * Le journal conserve ce que le client a réellement envoyé : les tables
-     * métier n'en sont que la projection courante, et rien n'est jamais écrasé.
-     */
-    private function journaliser(Seance $seance, string $type, Carbon $emisA, Carbon $recuA, array $charge, ?string $uuid = null): void
-    {
-        EvenementSync::create([
-            'uuid' => $uuid ?? $seance->uuid,
-            'type' => $type,
-            'seance_uuid' => $seance->uuid,
-            'charge' => $charge,
-            'emis_a' => $emisA,
-            'recu_a' => $recuA,
-        ]);
+        return $file;
     }
 }

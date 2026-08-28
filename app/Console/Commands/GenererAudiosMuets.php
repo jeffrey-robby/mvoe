@@ -71,6 +71,10 @@ class GenererAudiosMuets extends Command
     private function cheminsReferences()
     {
         return collect()
+            // Les audios d'interface ne sont pas en base : ce sont des libelles
+            // d'ecran, pas du curriculum. Ils viennent de config/mvoe.php.
+            ->merge(collect(config('mvoe.audios_interface'))
+                ->map(fn (string $cle) => "audio/interface/{$cle}.wav"))
             ->merge(Realisation::whereNotNull('fichier_audio')->pluck('fichier_audio'))
             ->merge(Episode::whereNotNull('fichier_audio')->pluck('fichier_audio'))
             ->merge(Question::whereNotNull('enonce_audio')->pluck('enonce_audio'))

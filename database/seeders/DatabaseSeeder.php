@@ -18,13 +18,26 @@ class DatabaseSeeder extends Seeder
             EspaceParentSeeder::class,
         ]);
 
-        // Le superviseur est le seul compte à mot de passe du système :
-        // le facilitateur travaille sur son appareil, le parent entre avec un
-        // code à 4 chiffres remis en main propre.
+        // Deux comptes de délégation, pour rendre le cloisonnement démontrable.
+        //
+        // `arrondissement` à null = délégation départementale : elle lit les
+        // huit arrondissements de la Mvila. Avec un arrondissement, la
+        // délégation ne lit que le sien — l'écart d'un facilitateur se lit
+        // avec lui, et son supérieur direct est le seul à en avoir l'usage.
         User::updateOrCreate(
             ['email' => 'superviseur@mvoe.test'],
             [
+                'name' => 'Délégation départementale de la Mvila',
+                'arrondissement' => null,
+                'password' => Hash::make('mvoe-demo'),
+            ],
+        );
+
+        User::updateOrCreate(
+            ['email' => 'ebolowa2@mvoe.test'],
+            [
                 'name' => 'Délégation d\'arrondissement — Ebolowa II',
+                'arrondissement' => 'Ebolowa II',
                 'password' => Hash::make('mvoe-demo'),
             ],
         );
@@ -36,7 +49,18 @@ class DatabaseSeeder extends Seeder
     {
         $this->command?->newLine();
         $this->command?->info('Accès de démonstration');
-        $this->command?->line('  Superviseur   superviseur@mvoe.test / mvoe-demo');
+        $this->command?->line('  Délégation    superviseur@mvoe.test / mvoe-demo  (département, 8 arrondissements)');
+        $this->command?->line('  Délégation    ebolowa2@mvoe.test / mvoe-demo      (Ebolowa II seulement)');
+        $this->command?->line(sprintf(
+            '  Facilitateur  %s / %s   (kit, sur le terrain)',
+            FacilitateurSeeder::COMPTE_DEMO['telephone'],
+            FacilitateurSeeder::COMPTE_DEMO['code_appareil'],
+        ));
+        $this->command?->line(sprintf(
+            '  Facilitateur  %s / %s   (poste de la délégation)',
+            FacilitateurSeeder::COMPTE_DEMO['email'],
+            FacilitateurSeeder::COMPTE_DEMO['password'],
+        ));
 
         foreach (CohorteSeeder::COMPTES_DEMO as $codeParent => $codeAcces) {
             $this->command?->line(sprintf('  Parent        %s / %s', $codeParent, $codeAcces));
