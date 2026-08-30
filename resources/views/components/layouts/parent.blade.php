@@ -29,19 +29,27 @@
     Interface allégée : tout est plus grand que dans le kit. L'écran sera tenu
     d'une main, souvent en plein soleil, parfois par quelqu'un qui lit mal.
 --}}
-<body x-data="{{ $composant }}" x-cloak class="h-full bg-blanc text-lg text-noir antialiased">
+<body x-data="{{ $composant }}" x-cloak class="terrain h-full text-lg antialiased">
 
     @if ($barre)
-        {{-- Sélecteur de langue permanent et bouton de sortie. --}}
+        {{-- Sélecteur de langue permanent et bouton de sortie.
+
+             Il ne propose QUE les langues réellement disponibles pour le
+             contenu ouvert : promettre une langue qui n'est pas chargée, c'est
+             promettre un contenu qui n'existe pas. Sur les écrans qui ne
+             portent aucun contenu, il propose toutes les langues du programme.
+
+             Le nom affiché est l'endonyme : personne ne cherche « Bulu » écrit
+             en français quand il ne lit pas le français. --}}
         <header class="sur-noir sticky top-0 z-30 bg-noir text-blanc">
             <div class="mx-auto flex max-w-2xl items-center gap-2 px-4 py-2">
                 <div class="flex gap-1" role="group" aria-label="Langue">
-                    <template x-for="l in langues" x-bind:key="l.code">
+                    <template x-for="l in languesOffertes()" x-bind:key="l.code">
                         <button type="button" x-on:click="changerLangue(l.code)"
                                 class="min-h-tactile rounded-net px-3 text-base font-semibold [font-family:var(--font-titre)]"
                                 x-bind:class="langue === l.code ? 'bg-jaune text-noir' : 'border border-blanc/40'"
                                 x-bind:aria-pressed="langue === l.code"
-                                x-text="l.libelle"></button>
+                                x-text="l.nom"></button>
                     </template>
                 </div>
 

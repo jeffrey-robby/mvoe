@@ -22,7 +22,9 @@
     <title>{{ $titre }} — Mvoé</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full bg-blanc text-noir antialiased">
+{{-- `terrain` : corps a 17 px, fond blanc franc, cibles a 48 px.
+     La grille du template ne s'applique pas ici. --}}
+<body class="terrain h-full antialiased">
 
     {{-- Barre d'état permanente. Elle ne défile pas : l'état de la
          synchronisation et du réseau doit rester lisible pendant toute la

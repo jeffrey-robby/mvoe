@@ -8,13 +8,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cohorte extends Model
 {
+    use \App\Models\Concerns\LimiteParPortee;
+
     protected $fillable = [
-        'libelle', 'arrondissement', 'ratio_max', 'curriculum_version_id', 'facilitateur_id', 'date_debut',
+        'libelle', 'arrondissement_id', 'ratio_max', 'curriculum_version_id',
+        'facilitateur_id', 'date_debut',
     ];
 
     protected function casts(): array
     {
         return ['date_debut' => 'date'];
+    }
+
+    public function arrondissement(): BelongsTo
+    {
+        return $this->belongsTo(Arrondissement::class);
     }
 
     public function curriculumVersion(): BelongsTo

@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Models\Episode;
 use App\Models\Feuilleton;
 use App\Models\Option;
@@ -135,12 +135,12 @@ class EspaceParentSeeder extends Seeder
      */
     private function feuilletons($unites): void
     {
-        foreach ([Langue::Fr, Langue::Bulu] as $langue) {
-            $marque = $langue === Langue::Bulu ? '[BU] ' : '';
+        foreach (Langue::whereIn('code', ['fr', 'bulu'])->orderBy('ordre')->get() as $langue) {
+            $marque = $langue->code === 'bulu' ? '[BU] ' : '';
 
             $feuilleton = Feuilleton::create([
                 'titre' => $marque.'La maison de Mama Ngo',
-                'langue' => $langue,
+                'langue_id' => $langue->id,
                 'resume' => $marque."Dans une concession d'Ebolowa, Mama Ngo élève trois enfants. Chaque épisode suit une soirée ordinaire où quelque chose se joue entre un adulte et un enfant.",
             ]);
 
@@ -149,7 +149,7 @@ class EspaceParentSeeder extends Seeder
                     'feuilleton_id' => $feuilleton->id,
                     'numero' => $numero,
                     'titre' => $marque.$titre,
-                    'fichier_audio' => sprintf('audio/feuilleton/%s-ep%d.wav', $langue->value, $numero),
+                    'fichier_audio' => sprintf('audio/feuilleton/%s-ep%d.wav', $langue->code, $numero),
                     'duree' => $duree,
                     'unite_id' => $unites[$rangUnite - 1]->id,
                 ]);
@@ -193,15 +193,15 @@ class EspaceParentSeeder extends Seeder
 
     private function situations(): void
     {
-        foreach ([Langue::Fr, Langue::Bulu] as $langue) {
-            $marque = $langue === Langue::Bulu ? '[BU] ' : '';
+        foreach (Langue::whereIn('code', ['fr', 'bulu'])->orderBy('ordre')->get() as $langue) {
+            $marque = $langue->code === 'bulu' ? '[BU] ' : '';
 
             foreach (self::SITUATIONS as $rang => [$libelle, $pictogramme]) {
                 SituationFrequente::create([
                     'libelle' => $marque.$libelle,
                     'pictogramme' => $pictogramme,
-                    'langue' => $langue,
-                    'fichier_audio' => sprintf('audio/situations/s%02d-%s.wav', $rang + 1, $langue->value),
+                    'langue_id' => $langue->id,
+                    'fichier_audio' => sprintf('audio/situations/s%02d-%s.wav', $rang + 1, $langue->code),
                     'ordre' => $rang + 1,
                 ]);
             }

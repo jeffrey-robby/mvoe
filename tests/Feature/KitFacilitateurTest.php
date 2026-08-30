@@ -16,29 +16,78 @@ use Tests\TestCase;
  */
 class KitFacilitateurTest extends TestCase
 {
-    public function test_les_trois_ecrans_du_kit_repondent_sans_authentification_serveur(): void
+    /** Toutes les coquilles du kit, y compris celles précachées par le SW. */
+    private const ECRANS = [
+        '/kit',
+        '/kit/connexion',
+        '/kit/seance?module=8',
+        '/kit/pointage',
+        '/kit/fidelite',
+        '/kit/inscrire',
+        '/kit/tableau-de-bord',
+        '/kit/activite',
+        '/kit/visite',
+        '/kit/signaler',
+        '/kit/formation',
+    ];
+
+    public function test_les_ecrans_du_kit_repondent_sans_authentification_serveur(): void
     {
         // Les routes ne servent que des coquilles : c'est le JavaScript qui
         // redirige vers la connexion s'il n'a pas de jeton en local.
-        $this->get('/kit')->assertOk();
-        $this->get('/kit/connexion')->assertOk();
-        $this->get('/kit/seance?module=8')->assertOk();
+        foreach (self::ECRANS as $ecran) {
+            $this->get($ecran)->assertOk();
+        }
+    }
+
+    public function test_le_service_worker_precache_toutes_les_coquilles_du_kit(): void
+    {
+        // Une coquille oubliée ici ne se voit qu'en mode avion, c'est-à-dire
+        // en séance, là où personne ne peut la réparer.
+        $modele = File::get(resource_path('sw/modele.js'));
+
+        preg_match('/const PAGES = \[(.*?)\];/s', $modele, $trouve);
+
+        foreach (self::ECRANS as $ecran) {
+            $chemin = explode('?', $ecran)[0];
+
+            $this->assertStringContainsString("'$chemin'", $trouve[1] ?? '',
+                "« $chemin » doit être précachée : sans elle, l'écran est blanc hors ligne.");
+        }
     }
 
     public function test_aucune_donnee_metier_nest_rendue_cote_serveur(): void
     {
         // La base est vide dans ce test : si un écran affichait quand même une
         // cohorte ou un module, c'est qu'il les rendrait côté serveur.
-        $seance = $this->get('/kit/seance?module=8')->getContent();
+        foreach (self::ECRANS as $ecran) {
+            $contenu = $this->get($ecran)->getContent();
 
-        $this->assertStringNotContainsString('Discipline positive', $seance);
-        $this->assertStringNotContainsString('Ebolowa', $seance);
-        $this->assertStringNotContainsString('EB2-', $seance);
+            $this->assertStringNotContainsString('Discipline positive', $contenu);
+            $this->assertStringNotContainsString('Ebolowa', $contenu);
+            $this->assertStringNotContainsString('EB2-', $contenu);
+        }
     }
 
     public function test_la_racine_mene_au_kit(): void
     {
         $this->get('/')->assertRedirect('/kit');
+    }
+
+    public function test_les_reperes_locaux_sont_purges_au_changement_de_cohorte(): void
+    {
+        // Changer de cohorte, c'est changer de salle : les repères écrits pour
+        // les parents de l'ancienne (« Odile, marché ») ne désignent plus
+        // personne. C'est la fin de cycle dont parle le cahier des charges, et
+        // le seul moment où elle se produit vraiment sur l'appareil.
+        $kit = File::get(resource_path('js/kit.js'));
+
+        $this->assertStringContainsString('await libelles.purger()', $kit);
+        $this->assertStringContainsString('changeDeCohorte', $kit);
+
+        // Et re-télécharger LA MÊME cohorte ne purge rien : ce serait perdre
+        // ses repères pour une simple mise à jour du paquet.
+        $this->assertStringContainsString('this.cohorte.id !== cohorteId', $kit);
     }
 
     public function test_le_libelle_local_des_parents_nest_jamais_mis_dans_la_file_denvoi(): void

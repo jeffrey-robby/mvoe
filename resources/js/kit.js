@@ -31,7 +31,8 @@ export function compteurSync(demo = null) {
         // `demo` n'existe que pour la page du système de design, qui doit
         // pouvoir montrer le compteur chargé sans qu'aucune séance n'attende.
         demo,
-        enAttente: demo ?? file.seancesEnAttente(),
+        total: demo ?? file.totalEnAttente(),
+        resume: demo === null ? file.resumeEnAttente() : [],
 
         init() {
             if (this.demo !== null) return;
@@ -39,14 +40,24 @@ export function compteurSync(demo = null) {
             // Le compteur ne disparaît jamais et n'est jamais recalculé à la
             // main : il se met à jour dès que la file bouge, d'où qu'elle bouge.
             window.addEventListener('file-modifiee', () => {
-                this.enAttente = file.seancesEnAttente();
+                this.total = file.totalEnAttente();
+                this.resume = file.resumeEnAttente();
             });
         },
 
+        /**
+         * Le libellé nomme ce qui attend réellement : « 1 séance · 2 activités
+         * non synchronisées ». Dire « séance » pour une causerie enverrait le
+         * facilitateur chercher une séance qui n'existe pas.
+         */
         get libelle() {
-            return this.enAttente === 1
-                ? '1 séance non synchronisée'
-                : `${this.enAttente} séances non synchronisées`;
+            if (this.resume.length === 0) return 'Tout est synchronisé';
+
+            const morceaux = this.resume.map(
+                (c) => `${c.n} ${c.n === 1 ? c.un : c.plusieurs}`,
+            );
+
+            return `${morceaux.join(' · ')} à envoyer`;
         },
     };
 }
@@ -101,15 +112,63 @@ export function accueil() {
         audiosEnCache: 0,
         message: null,
 
+        // Un facilitateur anime souvent plusieurs cohortes. Le kit n'en garde
+        // qu'UNE hors ligne — celle de la séance du jour — mais c'est à lui de
+        // dire laquelle, pas au code de prendre la première venue.
+        cohortes: [],
+        choix: false,
+
         init() {
             if (!session.estOuverte()) {
                 window.location.href = '/kit/connexion';
+
+                return;
+            }
+
+            if (!this.paquetPresent) this.listerLesCohortes();
+        },
+
+        async listerLesCohortes() {
+            try {
+                this.cohortes = (await api.cohortes()).cohortes;
+            } catch {
+                // Hors ligne sans paquet, il n'y a rien à faire ici : l'écran
+                // le dit déjà, inutile d'ajouter une erreur par-dessus.
+                this.cohortes = [];
             }
         },
 
-        get effectif() {
-            return paquet.parents().length;
+        /** Le nombre de choses en attente d'envoi, toutes natures confondues. */
+        get enAttente() {
+            return file.totalEnAttente();
         },
+
+        async ouvrirLeChoix() {
+            this.message = null;
+
+            // Changer de paquet remplace la liste des parents en local. Ce qui
+            // n'est pas encore parti se rattache à l'ancienne cohorte : on
+            // envoie d'abord, on change ensuite.
+            if (this.enAttente > 0) {
+                this.message = 'Envoyez d’abord ce qui attend avant de changer de cohorte.';
+
+                return;
+            }
+
+            this.choix = true;
+            await this.listerLesCohortes();
+        },
+
+        /**
+         * L'effectif est une PROPRIÉTÉ, pas un accesseur.
+         *
+         * Un accesseur qui lit `paquet.parents()` interroge un magasin que
+         * Alpine ne suit pas : après un changement de cohorte, l'écran gardait
+         * l'effectif de la précédente. Vingt-et-un parents affichés pour une
+         * cohorte qui en compte vingt, et le facilitateur cherche quelqu'un qui
+         * n'est pas dans la salle.
+         */
+        effectif: paquet.parents().length,
 
         get prochainModule() {
             // Le premier module renseigné du curriculum. Le kit ne prétend pas
@@ -117,20 +176,42 @@ export function accueil() {
             return this.modules.find((m) => m.renseigne) ?? null;
         },
 
-        async telecharger() {
+        async telecharger(cohorteId = null) {
             this.telechargement = true;
             this.message = null;
 
             try {
-                const liste = await api.cohortes();
-                const premiere = liste.cohortes[0];
+                // Une seule cohorte : inutile de faire choisir. Plusieurs :
+                // c'est le facilitateur qui désigne celle du jour.
+                if (!cohorteId) {
+                    if (!this.cohortes.length) await this.listerLesCohortes();
 
-                if (!premiere) {
-                    this.message = 'Aucune cohorte ne vous est attribuée.';
-                    return;
+                    if (this.cohortes.length === 0) {
+                        this.message = 'Aucune cohorte ne vous est attribuée.';
+
+                        return;
+                    }
+
+                    if (this.cohortes.length > 1) {
+                        this.choix = true;
+
+                        return;
+                    }
+
+                    cohorteId = this.cohortes[0].id;
                 }
 
-                const donnees = await api.paquet(premiere.id);
+                // Changer de cohorte, c'est changer de salle : les repères
+                // écrits pour les parents de l'ancienne (« Odile, marché ») ne
+                // désignent plus personne. On les purge — c'est la fin de cycle
+                // dont parle le brief, et le seul moment où elle se produit
+                // vraiment sur l'appareil.
+                const changeDeCohorte = this.cohorte !== null
+                    && this.cohorte.id !== cohorteId;
+
+                const donnees = await api.paquet(cohorteId);
+
+                if (changeDeCohorte) await libelles.purger();
 
                 // Écrit avant d'être affiché, comme tout le reste.
                 await paquet.enregistrer(donnees);
@@ -140,8 +221,10 @@ export function accueil() {
                 await this.mettreLesAudiosEnCache(donnees.audios);
 
                 this.paquetPresent = true;
+                this.choix = false;
                 this.cohorte = donnees.cohorte;
                 this.modules = donnees.modules;
+                this.effectif = paquet.parents().length;
                 this.message = `Paquet téléchargé, ${this.audiosEnCache} audios en cache. Vous pouvez passer hors ligne.`;
             } catch (e) {
                 this.message =
@@ -648,6 +731,555 @@ export function fidelite() {
             this.enregistre = true;
 
             window.location.href = '/kit';
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Inscription d'un parent, sur le terrain.
+ *
+ * Le parent ne s'inscrit jamais depuis un écran public : le facilitateur crée
+ * le dossier et lui remet son code en main propre. Le parent l'ACTIVE ensuite
+ * en se connectant à l'espace parent, s'il a un téléphone. S'il n'en a pas,
+ * le dossier existe quand même et il est pointé en séance comme les autres :
+ * un dossier, pas forcément un compte.
+ *
+ * Tout se passe hors ligne. Le code à quatre chiffres est donc tiré ICI :
+ * attendre le réseau pour le connaître reviendrait à ne rien pouvoir remettre.
+ *
+ * AUCUN NOM n'est demandé. Le facilitateur saisit un repère pour se souvenir
+ * de qui il s'agit au pointage ; ce repère reste sur son appareil et ne part
+ * jamais dans la file.
+ */
+export function inscrireParent() {
+    return {
+        cohorte: paquet.cohorte(),
+        codeParent: '',
+        repere: '',
+        langue: 'bulu',
+        statut: 'non_renseigne',
+        revenu: 'non_renseigne',
+        telephonePartage: false,
+        resultat: null,
+        occupe: false,
+
+        init() {
+            if (!session.estOuverte()) {
+                window.location.href = '/kit/connexion';
+
+                return;
+            }
+
+            this.codeParent = paquet.prochainCodeParent();
+        },
+
+        /**
+         * L'effectif est une PROPRIÉTÉ, pas un accesseur.
+         *
+         * Un accesseur qui lit `paquet.parents()` interroge un magasin que
+         * Alpine ne suit pas : après un changement de cohorte, l'écran gardait
+         * l'effectif de la précédente. Vingt-et-un parents affichés pour une
+         * cohorte qui en compte vingt, et le facilitateur cherche quelqu'un qui
+         * n'est pas dans la salle.
+         */
+        effectif: paquet.parents().length,
+
+        /** Le plafond se signale, il ne bloque pas : on n'exclut personne. */
+        get depassePlafond() {
+            return this.cohorte ? this.effectif >= this.cohorte.ratio_max : false;
+        },
+
+        async valider() {
+            if (this.occupe || !this.cohorte) return;
+
+            this.occupe = true;
+
+            // Quatre chiffres tirés au hasard de l'appareil. `crypto` plutôt
+            // que `Math.random` : c'est un secret, même court.
+            const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000)
+                .padStart(4, '0');
+
+            const profil = {
+                langue: this.langue,
+                statut_matrimonial: this.statut,
+                revenu_regularite: this.revenu,
+                telephone_partage: this.telephonePartage,
+            };
+
+            await file.inscrireParent(this.cohorte.id, this.codeParent, code, profil);
+
+            // Le paquet local connaît ce parent tout de suite : il est assis
+            // dans la salle, il sera pointé dans dix minutes.
+            await paquet.ajouterParent({ code_parent: this.codeParent, ...profil });
+
+            // Le repère du facilitateur, s'il en a saisi un. Il vit sous sa
+            // propre clé, hors de la file d'envoi, et ne quitte pas l'appareil.
+            if (this.repere.trim() !== '') {
+                await libelles.definir(this.codeParent, this.repere.trim());
+            }
+
+            fileModifiee();
+
+            this.effectif = paquet.parents().length;
+            this.resultat = { code_parent: this.codeParent, code_acces: code };
+            this.occupe = false;
+        },
+
+        recommencer() {
+            this.resultat = null;
+            this.repere = '';
+            this.telephonePartage = false;
+            this.codeParent = paquet.prochainCodeParent();
+            this.effectif = paquet.parents().length;
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Le tableau de bord du facilitateur.
+ *
+ * C'est le MÊME service serveur que celui des délégations, à la cinquième
+ * portée : la sienne, c'est-à-dire lui-même. Rien n'est recalculé autrement,
+ * et c'est la démonstration que le mécanisme de portée tient sur cinq niveaux.
+ *
+ * C'est le seul écran du kit qui demande du réseau, et c'est assumé : il
+ * regarde en arrière, il ne sert pas en séance. Hors ligne il le DIT, au lieu
+ * d'afficher des zéros qu'on prendrait pour la vérité.
+ */
+export function tableauDeBordFacilitateur() {
+    return {
+        facilitateur: session.facilitateur(),
+        indicateurs: null,
+        portee: null,
+        chargement: true,
+        horsLigne: false,
+
+        async init() {
+            if (!session.estOuverte()) {
+                window.location.href = '/kit/connexion';
+
+                return;
+            }
+
+            try {
+                const donnees = await api.tableauDeBordFacilitateur();
+
+                this.indicateurs = donnees.indicateurs;
+                this.portee = donnees.portee;
+            } catch (e) {
+                this.horsLigne = e instanceof ErreurHorsLigne;
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        nombre(valeur) {
+            return valeur === null || valeur === undefined
+                ? '—'
+                : String(valeur).replace('.', ',');
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enregistrer une activite de terrain.
+ *
+ * Le programme ne se resume pas aux seances de cohorte. Une causerie sous
+ * l'arbre, un porte-a-porte, une sensibilisation au marche comptent autant, et
+ * ne pas les enregistrer revient a conclure qu'elles n'ont pas eu lieu.
+ *
+ * La repartition par sexe et le nombre de participants en situation de
+ * handicap sont demandes a chaque fois. C'est ce qui rend le critere
+ * « handicap » mesurable plutot que declaratif : personne ne peut ecrire
+ * « le programme est inclusif » sans que quelqu'un ait compte.
+ */
+export function activiteTerrain() {
+    return {
+        types: paquet.referentiel()?.types_activite ?? [],
+        groupes: paquet.groupesSoutien(),
+        cohorte: paquet.cohorte(),
+
+        type: 'causerie_educative',
+        date: new Date().toISOString().slice(0, 10),
+        lieu: '',
+        duree: 60,
+        touches: 0,
+        hommes: 0,
+        femmes: 0,
+        handicap: 0,
+        gspUuid: '',
+        commentaire: '',
+        enregistre: false,
+        occupe: false,
+
+        init() {
+            if (!session.estOuverte()) window.location.href = '/kit/connexion';
+        },
+
+        get estReunionGsp() {
+            return this.type === 'reunion_gsp';
+        },
+
+        /** Ce qui n'a pas ete reparti par sexe. On le dit, on ne le comble pas. */
+        get nonRenseigne() {
+            return Math.max(0, this.touches - this.hommes - this.femmes);
+        },
+
+        get incoherent() {
+            return this.hommes + this.femmes > this.touches
+                || this.handicap > this.touches;
+        },
+
+        get peutValider() {
+            return this.lieu.trim() !== '' && this.touches > 0 && !this.incoherent;
+        },
+
+        async valider() {
+            if (!this.peutValider || this.occupe) return;
+
+            this.occupe = true;
+
+            await file.enregistrerActivite({
+                type: this.type,
+                date: this.date,
+                lieu: this.lieu.trim(),
+                duree_minutes: Number(this.duree),
+                nb_parents_touches: Number(this.touches),
+                nb_hommes: Number(this.hommes),
+                nb_femmes: Number(this.femmes),
+                nb_participants_handicap: Number(this.handicap),
+                cohorte_id: this.estReunionGsp ? this.cohorte?.id : null,
+                gsp_uuid: this.estReunionGsp && this.gspUuid ? this.gspUuid : null,
+                commentaire: this.commentaire.trim() || null,
+            });
+
+            fileModifiee();
+
+            this.enregistre = true;
+            this.occupe = false;
+        },
+
+        recommencer() {
+            this.enregistre = false;
+            this.lieu = '';
+            this.touches = 0;
+            this.hommes = 0;
+            this.femmes = 0;
+            this.handicap = 0;
+            this.commentaire = '';
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enregistrer une visite a domicile.
+ *
+ * AUCUN nom, aucune adresse precise, aucune position. Une localite, une
+ * composition, des difficultes fonctionnelles graduees. C'est la seule facon
+ * d'enregistrer ce travail sans constituer un fichier de familles vulnerables
+ * — document qui, une fois copie, ne protege plus personne.
+ */
+export function visiteDomicile() {
+    return {
+        difficultesPossibles: paquet.referentiel()?.difficultes_fonctionnelles ?? [],
+        foyersConnus: paquet.foyers(),
+
+        foyerUuid: '',
+        localite: '',
+        adultes: 2,
+        enfants: 2,
+        difficultes: [],
+        dejaSuivi: false,
+        date: new Date().toISOString().slice(0, 10),
+        observations: [],
+        suiviPrevu: false,
+        enregistre: false,
+        occupe: false,
+
+        /** Les observations sont des cases a cocher, jamais un recit libre. */
+        observationsPossibles: [
+            { valeur: 'espace_de_jeu', libelle: 'Un espace pour jouer' },
+            { valeur: 'routine_du_coucher', libelle: 'Une routine du coucher' },
+            { valeur: 'repas_partages', libelle: 'Des repas pris ensemble' },
+            { valeur: 'enfant_scolarise', libelle: 'Les enfants vont a l\u2019ecole' },
+            { valeur: 'tensions_dans_le_foyer', libelle: 'Des tensions dans le foyer' },
+            { valeur: 'entourage_present', libelle: 'Un entourage present' },
+        ],
+
+        init() {
+            if (!session.estOuverte()) window.location.href = '/kit/connexion';
+        },
+
+        get nouveauFoyer() {
+            return this.foyerUuid === '';
+        },
+
+        basculer(liste, valeur) {
+            const index = this[liste].indexOf(valeur);
+
+            if (index === -1) this[liste].push(valeur);
+            else this[liste].splice(index, 1);
+        },
+
+        get peutValider() {
+            return !this.nouveauFoyer || this.localite.trim() !== '';
+        },
+
+        async valider() {
+            if (!this.peutValider || this.occupe) return;
+
+            this.occupe = true;
+
+            const visite = {
+                date: this.date,
+                observations_structurees: [...this.observations],
+                suivi_prevu: this.suiviPrevu,
+            };
+
+            if (this.nouveauFoyer) {
+                await file.enregistrerVisite({
+                    localite: this.localite.trim(),
+                    nb_adultes: Number(this.adultes),
+                    nb_enfants: Number(this.enfants),
+                    difficultes_fonctionnelles_foyer: [...this.difficultes],
+                    deja_suivi_programme: this.dejaSuivi,
+                }, visite);
+            } else {
+                await file.enregistrerVisiteSurFoyer(this.foyerUuid, visite);
+            }
+
+            fileModifiee();
+
+            this.enregistre = true;
+            this.occupe = false;
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Signaler une situation preoccupante, et lire la suite qui y a ete donnee.
+ *
+ * Le signalement REMONTE : il entre dans la file du superviseur, qui juge et
+ * decide. Aucune autorite n'est prevenue automatiquement — une alerte
+ * automatique ferait courir un risque a l'enfant qu'elle pretend proteger.
+ *
+ * Aucune identite n'est demandee. L'ecran ne propose aucun champ ou en mettre
+ * une, et le serveur n'a aucune colonne pour l'accueillir.
+ */
+export function signalerTerrain() {
+    return {
+        types: paquet.referentiel()?.types_signalement ?? [],
+        gravites: paquet.referentiel()?.gravites ?? [],
+
+        type: 'maltraitance',
+        gravite: 'moyenne',
+        enregistre: false,
+        occupe: false,
+
+        // La relecture demande du reseau : elle regarde ce que le superviseur a
+        // repondu. Hors ligne, l'ecran le dit.
+        miens: [],
+        horsLigne: false,
+        chargement: true,
+
+        async init() {
+            if (!session.estOuverte()) {
+                window.location.href = '/kit/connexion';
+
+                return;
+            }
+
+            try {
+                this.miens = (await api.mesSignalements()).signalements;
+            } catch (e) {
+                this.horsLigne = e instanceof ErreurHorsLigne;
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        async valider() {
+            if (this.occupe) return;
+
+            this.occupe = true;
+
+            await file.enregistrerSignalement({ type: this.type, gravite: this.gravite });
+
+            fileModifiee();
+
+            this.enregistre = true;
+            this.occupe = false;
+        },
+
+        recommencer() {
+            this.enregistre = false;
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Les modules de formation du facilitateur.
+ *
+ * Un facilitateur forme il y a deux ans ne se refait pas former : il rouvre ses
+ * modules. Cet ecran existe pour cela, et il fonctionne HORS LIGNE — on revise
+ * dans un car, sur un banc, en attendant que la salle se remplisse. Un
+ * catalogue de formation qui exige une connexion ne sert qu'a ceux qui n'en ont
+ * pas besoin.
+ *
+ * La progression part par la file. Le serveur en fait avancer la derniere
+ * activite : rouvrir un module, c'est rester actif au registre.
+ */
+export function formationFacilitateur() {
+    return {
+        modules: paquet.formation(),
+        code: new URLSearchParams(window.location.search).get('module'),
+        // Recalculé après chaque lecture : le catalogue dit où il en est.
+        avancementDe(m) {
+            if (!m.sections.length) return 0;
+
+            return Math.round(((m.sections_vues ?? []).length / m.sections.length) * 100);
+        },
+        module: null,
+        section: 1,
+        vues: [],
+
+        chargement: false,
+        horsLigne: false,
+
+        async init() {
+            if (!session.estOuverte()) {
+                window.location.href = '/kit/connexion';
+
+                return;
+            }
+
+            // Un facilitateur qui vient d'être enregistré n'a pas encore de
+            // cohorte, donc pas de paquet — et c'est précisément lui qui a le
+            // plus besoin de ses modules. On les demande alors au serveur : il
+            // est encore assis en face de son superviseur, il a du réseau.
+            if (this.modules.length === 0) await this.chargerDepuisLeServeur();
+
+            if (this.code) this.ouvrir(this.code);
+        },
+
+        async chargerDepuisLeServeur() {
+            this.chargement = true;
+
+            try {
+                this.modules = (await api.formation()).modules.map((m) => ({
+                    ...m,
+                    // L'API rend le nombre de sections ; l'écran attend la liste.
+                    sections: Array.from({ length: m.sections }, (_, i) => ({ ordre: i + 1 })),
+                }));
+            } catch (e) {
+                this.horsLigne = e instanceof ErreurHorsLigne;
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        async ouvrir(code) {
+            this.code = code;
+            this.module = paquet.moduleFormation(code);
+
+            // Pas dans le paquet : on le demande, une fois.
+            if (!this.module) {
+                try {
+                    this.module = await api.moduleFormation(code);
+                } catch (e) {
+                    this.horsLigne = e instanceof ErreurHorsLigne;
+
+                    return;
+                }
+            }
+
+            // Ce qu'il a déjà lu vient du paquet quand il existe, du module
+            // servi par l'API sinon.
+            this.vues = [...(paquet.sectionsVues(code).length
+                ? paquet.sectionsVues(code)
+                : (this.module.sections_vues ?? []))];
+
+            // On reprend où il en était, pas au début. Rouvrir un module terminé
+            // ramène à sa première section ; un module commencé reprend à la
+            // suivante.
+            const suivante = this.module?.sections
+                .map((s) => s.ordre)
+                .find((o) => !this.vues.includes(o));
+
+            this.section = suivante ?? 1;
+
+            // Ouvrir un module, c'est déjà l'avoir ouvert : la section affichée
+            // compte sans qu'il ait à le déclarer.
+            this.marquerVue(this.section);
+        },
+
+        fermer() {
+            this.module = null;
+            this.code = null;
+        },
+
+        get sectionCourante() {
+            return this.module?.sections.find((s) => s.ordre === this.section) ?? null;
+        },
+
+        get derniereSection() {
+            return this.module ? this.section >= this.module.sections.length : false;
+        },
+
+        get avancement() {
+            if (!this.module?.sections.length) return 0;
+
+            return Math.round((this.vues.length / this.module.sections.length) * 100);
+        },
+
+        async aller(ordre) {
+            this.section = ordre;
+            await this.marquerVue(ordre);
+        },
+
+        async suivante() {
+            if (this.derniereSection) return;
+
+            await this.aller(this.section + 1);
+        },
+
+        async precedente() {
+            if (this.section <= 1) return;
+
+            this.section -= 1;
+        },
+
+        /**
+         * Une section lue rejoint la file. On envoie la liste complete a chaque
+         * fois plutot qu'un increment : le serveur fusionne, et une remontee
+         * perdue ne laisse pas de trou dans la progression.
+         */
+        async marquerVue(ordre) {
+            if (this.vues.includes(ordre)) return;
+
+            this.vues.push(ordre);
+            this.vues.sort((a, b) => a - b);
+
+            // Retenue en local D'ABORD : la lecture ne doit pas dépendre de
+            // l'envoi. À la relecture du paquet, il reprendra où il en était.
+            // Sans paquet, l'appel ne fait rien et la file suffit.
+            await paquet.marquerSectionVue(this.code, ordre);
+
+            await file.enregistrerProgression(this.code, [...this.vues]);
+
+            fileModifiee();
         },
     };
 }

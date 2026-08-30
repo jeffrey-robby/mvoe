@@ -81,11 +81,26 @@ const lecture = {
     },
 };
 
-const LANGUES = [
-    { code: 'fr', libelle: 'Français' },
-    { code: 'en', libelle: 'English' },
-    { code: 'bulu', libelle: 'Bulu' },
-];
+/*
+| Les langues viennent du SERVEUR, jamais d'une liste écrite ici.
+|
+| Le Cameroun compte plus de deux cents langues. Une liste en dur dans ce
+| fichier voudrait dire que l'équipe technique décide dans quelles langues un
+| parent peut écouter le programme — décision qui appartient au ministère, et
+| qui se prend en chargeant des réalisations.
+|
+| Le repli n'existe que pour le cas où l'appel échoue au tout premier écran,
+| avant qu'aucune langue n'ait pu être lue.
+*/
+const LANGUE_DE_REPLI = [{ code: 'fr', libelle: 'Français', nom: 'Français' }];
+
+async function chargerLesLangues() {
+    try {
+        return (await api.langues()).langues;
+    } catch {
+        return LANGUE_DE_REPLI;
+    }
+}
 
 /** Un seul lecteur à la fois : deux voix qui se superposent sont inaudibles. */
 let lecteurCourant = null;
@@ -126,7 +141,7 @@ export function entreeParent() {
     return {
         etape: 'langue',
         langue: null,
-        langues: LANGUES,
+        langues: LANGUE_DE_REPLI,
 
         codeParent: '',
         codeAcces: '',
@@ -140,6 +155,10 @@ export function entreeParent() {
         erreur: null,
         refusMineur: false,
         occupe: false,
+
+        async init() {
+            this.langues = await chargerLesLangues();
+        },
 
         choisirLangue(code) {
             this.langue = code;
@@ -220,8 +239,30 @@ export function entreeParent() {
 function baseParent() {
     return {
         langue: sessionParent.langue(),
-        langues: LANGUES,
+        langues: LANGUE_DE_REPLI,
         erreur: null,
+
+        async chargerLesLanguesDuProgramme() {
+            this.langues = await chargerLesLangues();
+        },
+
+        /**
+         * Les langues que le sélecteur permanent propose.
+         *
+         * Par défaut, toutes celles du programme : choisir sa langue est un
+         * droit du parent, pas une conséquence du catalogue. Mais un écran qui
+         * SAIT dans quelles langues son contenu existe restreint cette liste —
+         * proposer une langue non chargée, c'est promettre un contenu qui
+         * n'existe pas.
+         *
+         * UNE MÉTHODE, pas un accesseur : `{ ...baseParent() }` évalue les
+         * accesseurs au moment de l'étalement et n'en copie que la valeur. Un
+         * `get` ici serait figé à la construction, et tous les écrans
+         * n'afficheraient éternellement que la langue de repli.
+         */
+        languesOffertes() {
+            return this.langues;
+        },
 
         changerLangue(code) {
             this.langue = code;
@@ -278,8 +319,10 @@ export function accueilParent() {
             { cle: 'question', titre: 'Poser une question', lien: '/parent/question' },
         ],
 
-        init() {
-            exigerUneSession();
+        async init() {
+            if (!exigerUneSession()) return;
+
+            await this.chargerLesLanguesDuProgramme();
         },
 
         audioCarte(cle) {
@@ -303,8 +346,13 @@ export function ecouterParent() {
         modalite: 'audio',
         chargement: true,
 
+        // Les langues dans lesquelles le module ouvert existe vraiment.
+        languesDuModule: [],
+
         async init() {
             if (!exigerUneSession()) return;
+
+            await this.chargerLesLanguesDuProgramme();
 
             await this.chargerModules();
         },
@@ -318,6 +366,10 @@ export function ecouterParent() {
 
         async chargerModules() {
             this.chargement = true;
+            // De retour à la liste des modules, plus aucun contenu n'est ouvert :
+            // le sélecteur reprend toutes les langues du programme.
+            this.languesDuModule = [];
+            this.unite = null;
 
             try {
                 this.modules = (await api.modulesParent(sessionParent.jeton())).modules;
@@ -340,6 +392,7 @@ export function ecouterParent() {
                 );
 
                 this.unites = donnees.unites;
+                this.languesDuModule = donnees.langues_disponibles ?? [];
                 this.vue = 'unites';
             } catch (e) {
                 this.signaler(e);
@@ -386,8 +439,31 @@ export function ecouterParent() {
             window.location.href = '/parent/accueil';
         },
 
+        /**
+         * Le contenu n'existe pas dans la langue demandée : on l'a servi dans
+         * la langue de repli. Le serveur le dit, l'écran le répète — afficher
+         * du français en laissant croire que c'est du bulu serait pire que de
+         * ne rien afficher.
+         */
         get versionManquante() {
-            return this.unite && this.unite.langue_servie !== this.unite.langue_demandee;
+            return this.unite?.langue_de_repli === true;
+        },
+
+        /** Le nom de la langue réellement servie, tel qu'on l'affiche. */
+        get nomLangueServie() {
+            return this.unite?.langue_servie?.nom ?? '';
+        },
+
+        /**
+         * Sur cet écran, le sélecteur ne propose que les langues dans
+         * lesquelles le contenu ouvert existe VRAIMENT. Ailleurs, toutes celles
+         * du programme.
+         */
+        languesOffertes() {
+            const duContenu = this.unite?.langues_disponibles
+                ?? this.languesDuModule;
+
+            return duContenu?.length ? duContenu : this.langues;
         },
     };
 }
@@ -411,6 +487,8 @@ export function feuilletonParent() {
 
         async init() {
             if (!exigerUneSession()) return;
+
+            await this.chargerLesLanguesDuProgramme();
 
             await this.recharger();
         },
@@ -556,6 +634,8 @@ export function questionsSemaine() {
         async init() {
             if (!exigerUneSession()) return;
 
+            await this.chargerLesLanguesDuProgramme();
+
             await this.recharger();
         },
 
@@ -641,6 +721,8 @@ export function assistantParent() {
 
         async init() {
             if (!exigerUneSession()) return;
+
+            await this.chargerLesLanguesDuProgramme();
 
             await this.recharger();
         },

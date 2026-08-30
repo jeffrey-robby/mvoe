@@ -24,12 +24,12 @@
                         <div class="flex gap-2">
                             <button type="button" x-on:click="choisirLangue(l.code)"
                                     class="min-h-tactile flex-1 rounded-carte border-[3px] border-noir bg-blanc px-4 py-4 text-left text-2xl font-semibold [font-family:var(--font-titre)] hover:bg-jaune"
-                                    x-text="l.libelle"></button>
+                                    x-text="l.nom"></button>
 
                             {{-- Chaque option est dite dans sa propre langue. --}}
                             <button type="button" x-on:click="ecouterLangue(l.code)"
                                     class="flex min-h-tactile w-16 items-center justify-center rounded-carte bg-jaune text-noir"
-                                    x-bind:aria-label="'Écouter : ' + l.libelle">
+                                    x-bind:aria-label="'Écouter : ' + l.nom">
                                 <svg class="size-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M4 9v6h4l5 4V5L8 9H4z"/>
                                 </svg>

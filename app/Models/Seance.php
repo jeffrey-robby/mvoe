@@ -10,7 +10,15 @@ use Illuminate\Support\Collection;
 
 class Seance extends Model
 {
+    use \App\Models\Concerns\LimiteParPortee;
+
     protected $fillable = ['uuid', 'cohorte_id', 'module_id', 'date', 'facilitateur_id', 'recue_a'];
+
+    /** Une séance n'a pas d'arrondissement : elle tient celui de sa cohorte. */
+    protected static function relaisDePortee(): ?array
+    {
+        return [Cohorte::class, 'cohorte_id'];
+    }
 
     protected function casts(): array
     {
@@ -77,23 +85,28 @@ class Seance extends Model
      */
     public function ecarts(): Collection
     {
-        $observees = $this->sequencesOuvertes()->pluck('sequence_id')->unique();
-        $declarees = $this->fichesFidelite()
+        // On passe par les relations, pas par des requêtes : un tableau de bord
+        // national confronte des centaines de séances, et trois requêtes par
+        // séance deviennent là des milliers. Chargées d'avance, elles sont
+        // gratuites ; sinon Eloquent les charge à la demande, comme avant.
+        $observees = $this->sequencesOuvertes->pluck('sequence_id')->unique();
+        $declarees = $this->fichesFidelite
             ->whereNotNull('sequence_id')
             ->pluck('realisee_bool', 'sequence_id');
 
-        return $this->module->sequences()->ordonnees()->get()->map(function (Sequence $sequence) use ($observees, $declarees) {
-            $observee = $observees->contains($sequence->id);
-            $declaree = $declarees->has($sequence->id) ? (bool) $declarees[$sequence->id] : null;
+        return $this->module->sequences->sortBy('ordre')->values()
+            ->map(function (Sequence $sequence) use ($observees, $declarees) {
+                $observee = $observees->contains($sequence->id);
+                $declaree = $declarees->has($sequence->id) ? (bool) $declarees[$sequence->id] : null;
 
-            $ecart = match (true) {
-                $declaree === true && ! $observee => 'declaree_non_observee',
-                $declaree === false && $observee => 'observee_non_declaree',
-                default => null,
-            };
+                $ecart = match (true) {
+                    $declaree === true && ! $observee => 'declaree_non_observee',
+                    $declaree === false && $observee => 'observee_non_declaree',
+                    default => null,
+                };
 
-            return compact('sequence', 'declaree', 'observee', 'ecart');
-        });
+                return compact('sequence', 'declaree', 'observee', 'ecart');
+            });
     }
 
     public function nombreEcarts(): int
@@ -107,8 +120,8 @@ class Seance extends Model
      */
     public function nombreTouches(): int
     {
-        return $this->presences()
-            ->whereIn('statut', [StatutPresence::Present->value, StatutPresence::RattrapeBinome->value])
+        return $this->presences
+            ->whereIn('statut', [StatutPresence::Present, StatutPresence::RattrapeBinome])
             ->count();
     }
 }

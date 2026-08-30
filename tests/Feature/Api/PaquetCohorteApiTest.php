@@ -77,12 +77,14 @@ class PaquetCohorteApiTest extends ApiTestCase
 
     public function test_un_facilitateur_ne_telecharge_pas_le_paquet_dune_cohorte_qui_nest_pas_la_sienne(): void
     {
+        $mvangan = \App\Models\Arrondissement::where('libelle', 'Mvangan')->firstOrFail();
+
         $cohorte = \App\Models\Cohorte::create([
             'libelle' => 'Cohorte d\'un autre',
-            'arrondissement' => 'Mvangan',
+            'arrondissement_id' => $mvangan->id,
             'ratio_max' => 20,
             'curriculum_version_id' => 1,
-            'facilitateur_id' => \App\Models\Facilitateur::where('arrondissement', 'Mvangan')->value('id'),
+            'facilitateur_id' => \App\Models\Facilitateur::where('arrondissement_id', $mvangan->id)->value('id'),
             'date_debut' => '2026-01-01',
         ]);
 

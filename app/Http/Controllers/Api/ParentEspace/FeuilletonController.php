@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\ParentEspace;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Http\Controllers\Controller;
 use App\Models\Episode;
 use App\Models\Feuilleton;
@@ -20,22 +20,38 @@ use Illuminate\Http\Request;
  */
 class FeuilletonController extends Controller
 {
+    use ResoutLaLangue;
+
     public function index(Request $request): JsonResponse
     {
-        $langue = Langue::tryFrom((string) $request->query('langue')) ?? $request->user()->langue_pref;
+        $langue = $this->langueDemandee($request);
 
-        $feuilletons = Feuilleton::where('langue', $langue)->with('episodes')->get();
+        $feuilletons = Feuilleton::where('langue_id', $langue->id)->with('episodes', 'langue')->get();
+        $repli = false;
 
+        // Repli annonce, jamais silencieux.
         if ($feuilletons->isEmpty()) {
-            $feuilletons = Feuilleton::where('langue', Langue::Fr)->with('episodes')->get();
+            $feuilletons = Feuilleton::where('langue_id', Langue::parDefaut()->id)
+                ->with('episodes', 'langue')->get();
+            $repli = $feuilletons->isNotEmpty();
         }
 
         return response()->json([
-            'langue' => $langue->value,
+            'langue_demandee' => $this->langueRendue($langue),
+            'langue_de_repli' => $repli,
+            // Les langues dans lesquelles un feuilleton existe vraiment.
+            'langues_disponibles' => Feuilleton::with('langue')->get()
+                ->map(fn (Feuilleton $f) => $f->langue)
+                ->filter()
+                ->unique('id')
+                ->sortBy('ordre')
+                ->map(fn (Langue $l) => $this->langueRendue($l))
+                ->values()
+                ->all(),
             'feuilletons' => $feuilletons->map(fn (Feuilleton $f) => [
                 'id' => $f->id,
                 'titre' => $f->titre,
-                'langue' => $f->langue->value,
+                'langue' => $this->langueRendue($f->langue),
                 'resume' => $f->resume,
                 'episodes' => $f->episodes->map(fn (Episode $e) => [
                     'id' => $e->id,

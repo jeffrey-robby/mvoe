@@ -53,9 +53,20 @@ const liste = [...ressources].sort();
 
 // La version dérive du contenu : deux builds identiques produisent le même
 // service worker, et le cache n'est purgé que lorsque quelque chose a changé.
-const version = createHash('sha256').update(liste.join('|')).digest('hex').slice(0, 12);
+//
+// Le MODÈLE en fait partie, pas seulement la liste des fichiers. Sans lui,
+// ajouter une page à précacher ne changeait pas la version : les appareils
+// déjà installés gardaient l'ancien cache et n'auraient jamais connu la
+// nouvelle page — c'est-à-dire un écran blanc en mode avion, sur le terrain.
+const modele = readFileSync('resources/sw/modele.js', 'utf8');
 
-const sortie = readFileSync('resources/sw/modele.js', 'utf8')
+const version = createHash('sha256')
+    .update(liste.join('|'))
+    .update(modele)
+    .digest('hex')
+    .slice(0, 12);
+
+const sortie = modele
     .replace('__VERSION__', version)
     .replace('__RESSOURCES__', JSON.stringify(liste, null, 4));
 

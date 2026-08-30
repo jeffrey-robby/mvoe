@@ -54,7 +54,9 @@ class VerifierDonnees extends Command
 
     private function registre(): void
     {
-        $facilitateurs = Facilitateur::orderBy('arrondissement')->orderBy('nom')->get();
+        $facilitateurs = Facilitateur::with('arrondissement')->get()
+            ->sortBy(fn (Facilitateur $f) => $f->arrondissement->libelle.$f->nom)
+            ->values();
 
         $this->newLine();
         $this->info(sprintf(
@@ -67,7 +69,7 @@ class VerifierDonnees extends Command
         $this->table(
             ['Arrondissement', 'Facilitateur', 'Dernière activité', 'Statut'],
             $facilitateurs->map(fn (Facilitateur $f) => [
-                $f->arrondissement,
+                $f->arrondissement->libelle,
                 $f->nom,
                 $f->derniere_activite?->format('d/m/Y') ?? 'jamais',
                 $f->estActif() ? 'actif' : 'inactif',

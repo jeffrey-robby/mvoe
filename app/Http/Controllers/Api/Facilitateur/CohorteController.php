@@ -21,14 +21,14 @@ class CohorteController extends Controller
 
         $cohortes = Cohorte::where('facilitateur_id', $facilitateur->id)
             ->withCount('parents')
-            ->with('curriculumVersion')
+            ->with('curriculumVersion', 'arrondissement:id,libelle')
             ->get();
 
         return response()->json([
             'cohortes' => $cohortes->map(fn (Cohorte $c) => [
                 'id' => $c->id,
                 'libelle' => $c->libelle,
-                'arrondissement' => $c->arrondissement,
+                'arrondissement' => $c->arrondissement->libelle,
                 'effectif' => $c->parents_count,
                 'ratio_max' => $c->ratio_max,
                 'places_restantes' => $c->placesRestantes(),

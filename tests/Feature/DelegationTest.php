@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cohorte;
 use Illuminate\Support\Facades\File;
 use Tests\ApiTestCase;
 
@@ -14,10 +15,15 @@ use Tests\ApiTestCase;
  */
 class DelegationTest extends ApiTestCase
 {
-    public function test_les_quatre_ecrans_repondent(): void
+    /** La seule cohorte complète en données, celle qu'on ouvre en démonstration. */
+    private const COHORTE_DEMO = 'Ebolowa II — groupe du mardi';
+
+
+    public function test_les_ecrans_de_la_delegation_repondent(): void
     {
         foreach ([
             '/superviseur',
+            '/superviseur/tableau-de-bord',
             '/superviseur/connexion',
             '/superviseur/rapport',
             '/superviseur/parametres',
@@ -30,7 +36,8 @@ class DelegationTest extends ApiTestCase
     {
         // Même règle que pour le kit : le client Blade n'a aucun privilège que
         // l'application Flutter n'aurait pas. Tout passe par l'API et un jeton.
-        foreach (['/superviseur', '/superviseur/rapport', '/superviseur/parametres'] as $route) {
+        foreach (['/superviseur', '/superviseur/tableau-de-bord', '/superviseur/rapport',
+            '/superviseur/parametres'] as $route) {
             $contenu = $this->get($route)->getContent();
 
             $this->assertStringNotContainsString('Ndzana', $contenu);
@@ -43,8 +50,13 @@ class DelegationTest extends ApiTestCase
         $reponse = $this->getJson('/api/superviseur/cohortes', $this->entete($this->jetonSuperviseur()))
             ->assertOk();
 
-        $cohorte = $reponse->json('cohortes.0');
+        // La cohorte est retrouvée par son libellé, jamais par sa position :
+        // depuis que la région entière est peuplée, « la première cohorte »
+        // n'est plus celle de la démonstration.
+        $cohorte = collect($reponse->json('cohortes'))
+            ->firstWhere('libelle', self::COHORTE_DEMO);
 
+        $this->assertNotNull($cohorte, 'La cohorte de démonstration doit être lisible ici.');
         $this->assertSame(20, $cohorte['ratio_max']);
         $this->assertSame(20, $cohorte['effectif']);
         $this->assertSame(0, $cohorte['effectif_au_dela_du_plafond']);
@@ -53,12 +65,13 @@ class DelegationTest extends ApiTestCase
     public function test_baisser_le_plafond_ne_retire_personne(): void
     {
         $jeton = $this->jetonSuperviseur();
+        $id = Cohorte::where('libelle', self::COHORTE_DEMO)->value('id');
 
-        $this->patchJson('/api/superviseur/cohortes/1', ['ratio_max' => 10], $this->entete($jeton))
+        $this->patchJson("/api/superviseur/cohortes/{$id}", ['ratio_max' => 10], $this->entete($jeton))
             ->assertOk();
 
-        $cohorte = $this->getJson('/api/superviseur/cohortes', $this->entete($jeton))
-            ->json('cohortes.0');
+        $cohorte = collect($this->getJson('/api/superviseur/cohortes', $this->entete($jeton))
+            ->json('cohortes'))->firstWhere('libelle', self::COHORTE_DEMO);
 
         // Le programme ne supprime pas quelqu'un parce qu'un chiffre a changé :
         // le dépassement est signalé, il n'est pas « corrigé ».
@@ -73,57 +86,102 @@ class DelegationTest extends ApiTestCase
             ->assertStatus(403);
     }
 
+    public function test_chaque_niveau_lit_exactement_sa_portee(): void
+    {
+        // Un seul registre, quatre portees. On n'assene pas des nombres tires
+        // du jeu de donnees : on verifie la FORME de la portee, qui elle ne
+        // depend pas du volume seede.
+        $attendu = [
+            'national' => null,   // aucun filtre
+            'region' => 29,
+            'departement' => 8,
+            'arrondissement' => 1,
+        ];
+
+        foreach ([
+            'national' => fn () => $this->jetonNational(),
+            'region' => fn () => $this->jetonRegional(),
+            'departement' => fn () => $this->jetonSuperviseur(),
+            'arrondissement' => fn () => $this->jetonSuperviseurArrondissement(),
+        ] as $niveau => $jeton) {
+            $this->app['auth']->forgetGuards();
+
+            $reponse = $this->getJson('/api/superviseur/facilitateurs', $this->entete($jeton()))
+                ->assertOk();
+
+            $this->assertSame($niveau, $reponse->json('portee.niveau'));
+            $this->assertSame($attendu[$niveau], $reponse->json('portee.arrondissements'));
+        }
+    }
+
     public function test_une_delegation_darrondissement_ne_lit_que_le_sien(): void
     {
-        $jeton = $this->jetonSuperviseurArrondissement();
+        $registre = $this->getJson('/api/superviseur/facilitateurs',
+            $this->entete($this->jetonSuperviseurArrondissement()))->assertOk();
 
-        $registre = $this->getJson('/api/superviseur/facilitateurs', $this->entete($jeton))->assertOk();
-
-        $this->assertSame('Ebolowa II', $registre->json('perimetre'));
-        $this->assertSame(2, $registre->json('synthese.formes'));
+        $this->assertSame('Ebolowa II', $registre->json('portee.libelle'));
+        $this->assertNotEmpty($registre->json('facilitateurs'));
 
         foreach ($registre->json('facilitateurs') as $f) {
             $this->assertSame('Ebolowa II', $f['arrondissement']);
         }
     }
 
-    public function test_la_delegation_departementale_lit_les_huit_arrondissements(): void
+    public function test_une_delegation_departementale_ne_voit_aucun_autre_departement(): void
     {
-        $registre = $this->getJson('/api/superviseur/facilitateurs', $this->entete($this->jetonSuperviseur()))
-            ->assertOk();
+        $registre = $this->getJson('/api/superviseur/facilitateurs',
+            $this->entete($this->jetonSuperviseur()))->assertOk();
 
-        $this->assertSame('Departement de la Mvila', str_replace('é', 'e', $registre->json('perimetre')));
-        $this->assertSame(14, $registre->json('synthese.formes'));
+        $this->assertSame('Mvila', $registre->json('portee.libelle'));
+
+        foreach ($registre->json('facilitateurs') as $f) {
+            $this->assertSame('Mvila', $f['departement']);
+        }
     }
 
-    public function test_le_perimetre_ne_selargit_pas_par_un_parametre_durl(): void
+    public function test_le_national_voit_les_quatre_departements(): void
     {
-        $jeton = $this->jetonSuperviseurArrondissement();
+        $registre = $this->getJson('/api/superviseur/facilitateurs',
+            $this->entete($this->jetonNational()))->assertOk();
 
-        // Le filtre de la requete ne peut que restreindre davantage.
-        $reponse = $this->getJson('/api/superviseur/facilitateurs?arrondissement=Mvangan',
-            $this->entete($jeton))->assertOk();
+        $departements = collect($registre->json('facilitateurs'))->pluck('departement')->unique();
 
+        $this->assertCount(4, $departements);
+        $this->assertSame(50, $registre->json('synthese.formes'));
+    }
+
+    public function test_la_portee_ne_selargit_pas_par_un_parametre_durl(): void
+    {
+        // Un arrondissement d'un AUTRE departement que celui du compte.
+        $kribi = \App\Models\Arrondissement::where('libelle', 'Kribi I')->value('id');
+
+        $reponse = $this->getJson("/api/superviseur/facilitateurs?arrondissement_id={$kribi}",
+            $this->entete($this->jetonSuperviseur()))->assertOk();
+
+        // Le filtre de requete ne peut que restreindre davantage. Une fuite
+        // ici serait une fuite de donnees entre departements.
         $this->assertSame([], $reponse->json('facilitateurs'));
     }
 
-    public function test_le_rapport_est_cloisonne_sur_le_perimetre_du_compte(): void
+    public function test_le_rapport_est_cloisonne_sur_la_portee_du_compte(): void
     {
         $arrondissement = $this->getJson('/api/superviseur/rapport?annee=2026&trimestre=3',
             $this->entete($this->jetonSuperviseurArrondissement()))->assertOk();
 
-        // En test, deux requetes successives partagent la meme instance
-        // d'application et le garde a deja resolu l'utilisateur. En production
-        // chaque requete repart de zero ; on reproduit ca ici.
         $this->app['auth']->forgetGuards();
 
-        $departement = $this->getJson('/api/superviseur/rapport?annee=2026&trimestre=3',
-            $this->entete($this->jetonSuperviseur()))->assertOk();
+        $national = $this->getJson('/api/superviseur/rapport?annee=2026&trimestre=3',
+            $this->entete($this->jetonNational()))->assertOk();
 
-        // Le dispositif compte varie ; les seances d'Ebolowa II sont les memes.
-        $this->assertSame(2, $arrondissement->json('synthese.facilitateurs_formes'));
-        $this->assertSame(14, $departement->json('synthese.facilitateurs_formes'));
-        $this->assertSame('Ebolowa II', $arrondissement->json('perimetre'));
+        $this->assertSame('Ebolowa II', $arrondissement->json('portee.libelle'));
+        $this->assertSame('national', $national->json('portee.niveau'));
+
+        // Le dispositif compte varie avec la portee ; les seances d'Ebolowa II
+        // sont les memes des deux cotes.
+        $this->assertLessThan(
+            $national->json('synthese.facilitateurs_formes'),
+            $arrondissement->json('synthese.facilitateurs_formes'),
+        );
     }
 
     public function test_le_rapport_est_un_document_pas_un_tableau_de_bord(): void

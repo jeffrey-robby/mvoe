@@ -15,6 +15,11 @@
           x-bind:class="enLigne ? 'bg-blanc' : 'border border-blanc'"
           aria-hidden="true"></span>
 
-    {{-- Jamais la couleur seule : le mot est toujours là. --}}
-    <span class="intitule text-xs" x-text="enLigne ? 'En ligne' : 'Hors ligne'">Hors ligne</span>
+    {{-- Jamais la couleur seule : le mot est toujours là.
+
+         Le texte de repli dit « Réseau » et non « Hors ligne » : le magasin
+         local s'ouvre avant qu'Alpine ne monte quoi que ce soit, et pendant ce
+         court instant le repli est ce qui s'affiche. Annoncer « hors ligne »
+         à chaque ouverture d'écran serait un mensonge répété. --}}
+    <span class="intitule text-xs" x-text="enLigne ? 'En ligne' : 'Hors ligne'">Réseau</span>
 </span>

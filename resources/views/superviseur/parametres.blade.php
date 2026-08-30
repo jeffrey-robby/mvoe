@@ -16,27 +16,27 @@
         <div class="flex flex-wrap items-baseline justify-between gap-3">
             <div>
                 <h1 class="text-3xl">Paramètres des cohortes</h1>
-                <p class="mt-1 text-gris-texte">
+                <p class="mt-1 text-white-dark">
                     Le plafond d'une cohorte se change ici, et prend effet immédiatement.
                 </p>
             </div>
 
-            <x-mvoe.bouton variante="discret" x-on:click="deconnecter()">
+            <button type="button" class="btn btn-neutre" x-on:click="deconnecter()">
                 Fermer la session
-            </x-mvoe.bouton>
+            </button>
         </div>
 
         <template x-if="chargement">
-            <p class="text-gris-texte">Chargement…</p>
+            <p class="text-white-dark">Chargement…</p>
         </template>
 
-        <p x-show="erreur" x-text="erreur" class="rounded-net bg-jaune-sourd px-3 py-2 text-sm"></p>
+        <p x-show="erreur" x-text="erreur" class="panel border-l-4 border-warning"></p>
 
         {{-- La confirmation de la dernière modification. Grande, en toutes
              lettres : devant un jury, une action sans retour visible est une
              action dont on doute. --}}
         <div x-cloak x-show="modification"
-             class="rounded-carte border-[3px] border-noir bg-jaune p-4">
+             class="panel border-l-4 border-primary">
             <p class="text-xl font-semibold [font-family:var(--font-titre)]">
                 Plafond modifié
             </p>
@@ -59,13 +59,13 @@
 
         <div class="space-y-4">
             <template x-for="c in cohortes" x-bind:key="c.id">
-                <div class="rounded-carte border border-ligne p-4">
+                <div class="panel">
 
                     <div class="flex flex-wrap items-baseline justify-between gap-3">
                         <div>
                             <p class="text-xl font-semibold [font-family:var(--font-titre)]"
                                x-text="c.libelle"></p>
-                            <p class="text-sm text-gris-texte">
+                            <p class="text-sm text-white-dark">
                                 <span x-text="c.arrondissement"></span>
                                 <template x-if="c.facilitateur">
                                     <span> · <span x-text="c.facilitateur"></span></span>
@@ -97,8 +97,8 @@
                             <template x-for="valeur in [10, 15, 20, 25]" x-bind:key="valeur">
                                 <button type="button"
                                         x-on:click="changerRatio(c, valeur)"
-                                        class="min-h-tactile w-20 rounded-net border-2 border-noir text-lg font-semibold [font-family:var(--font-titre)]"
-                                        x-bind:class="c.ratio_max === valeur ? 'bg-jaune' : 'bg-blanc'"
+                                        class="btn w-20 text-lg"
+                                        x-bind:class="c.ratio_max === valeur ? 'btn-primary' : 'btn-neutre'"
                                         x-bind:aria-pressed="c.ratio_max === valeur"
                                         x-text="valeur"></button>
                             </template>
@@ -106,11 +106,11 @@
                     </div>
 
                     <p x-show="c.effectif_au_dela_du_plafond > 0"
-                       class="mt-3 rounded-net bg-jaune-sourd px-3 py-2 text-sm">
+                       class="mt-3 rounded-md bg-warning-light px-3 py-2 text-base">
                         <span class="chiffre" x-text="c.effectif_au_dela_du_plafond"></span>
                         <span x-text="c.effectif_au_dela_du_plafond === 1
-                            ? 'parent inscrit au-delà du plafond. Il n'a pas été retiré.'
-                            : 'parents inscrits au-delà du plafond. Aucun n'a été retiré.'"></span>
+                            ? 'parent inscrit au-delà du plafond. Il n’a pas été retiré.'
+                            : 'parents inscrits au-delà du plafond. Aucun n’a été retiré.'"></span>
                     </p>
                 </div>
             </template>
@@ -120,7 +120,7 @@
             <x-mvoe.vide>Aucune cohorte n'est enregistrée.</x-mvoe.vide>
         </template>
 
-        <p class="max-w-prose text-sm text-gris-texte">
+        <p class="max-w-prose text-sm text-white-dark">
             Le plafond est une donnée de la cohorte, jamais une constante du code : c'est ce qui
             permet à une délégation d'adapter la taille de ses groupes sans attendre une nouvelle
             version de l'application.

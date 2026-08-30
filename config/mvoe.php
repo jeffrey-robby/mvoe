@@ -50,6 +50,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Groupes de soutien parental
+    |--------------------------------------------------------------------------
+    |
+    | Nombre de jours sans reunion au-dela duquel un groupe est presente comme
+    | inactif. Comme pour le facilitateur, ce n'est pas une colonne en base :
+    | un booleen `actif` resterait a `true` pendant des annees sans que personne
+    | ne s'en apercoive. Le guide officiel recommande une reunion mensuelle ;
+    | 90 jours laisse passer deux mois manques avant d'alerter.
+    |
+    */
+
+    'gsp' => [
+        'jours_sans_reunion' => (int) env('MVOE_JOURS_SANS_REUNION', 90),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Espace parent
     |--------------------------------------------------------------------------
     |

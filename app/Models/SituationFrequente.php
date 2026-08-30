@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Langue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,11 +16,16 @@ class SituationFrequente extends Model
 {
     protected $table = 'situations_frequentes';
 
-    protected $fillable = ['libelle', 'pictogramme', 'langue', 'fichier_audio', 'ordre'];
+    protected $fillable = ['libelle', 'pictogramme', 'langue_id', 'fichier_audio', 'ordre'];
+
+    public function langue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Langue::class);
+    }
 
     protected function casts(): array
     {
-        return ['langue' => Langue::class];
+        return [];
     }
 
     public function scopeOrdonnees(Builder $query): Builder

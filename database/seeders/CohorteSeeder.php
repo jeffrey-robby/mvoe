@@ -2,11 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Models\Binome;
 use App\Models\Cohorte;
 use App\Models\CurriculumVersion;
 use App\Models\Enfant;
+use App\Models\Arrondissement;
 use App\Models\Facilitateur;
 use App\Models\ParentProgramme;
 use Illuminate\Database\Seeder;
@@ -80,7 +81,7 @@ class CohorteSeeder extends Seeder
     {
         $cohorte = Cohorte::create([
             'libelle' => 'Ebolowa II — groupe du mardi',
-            'arrondissement' => 'Ebolowa II',
+            'arrondissement_id' => Arrondissement::where('libelle', 'Ebolowa II')->value('id'),
             // Valeur de départ de la démonstration : elle sera passée à 10
             // depuis l'écran de paramètres, sans toucher au code.
             'ratio_max' => 20,
@@ -88,6 +89,10 @@ class CohorteSeeder extends Seeder
             'facilitateur_id' => Facilitateur::where('nom', 'Ndzana Étienne')->value('id'),
             'date_debut' => '2026-07-07',
         ]);
+
+        // Résolues une fois : le seeder écrit vingt parents, il n'a pas
+        // besoin de vingt requêtes pour retrouver trois langues.
+        $langues = Langue::pluck('id', 'code');
 
         $parents = [];
 
@@ -97,7 +102,7 @@ class CohorteSeeder extends Seeder
                 'code_parent' => $code,
                 // Le cast `hashed` du modèle hache à l'écriture.
                 'code_acces' => self::COMPTES_DEMO[$code] ?? $this->codeAcces($rang),
-                'langue_pref' => Langue::from($langue),
+                'langue_id' => $langues[$langue],
                 'statut_matrimonial' => $statut,
                 'revenu_regularite' => $revenu,
                 'telephone_partage' => $partage,

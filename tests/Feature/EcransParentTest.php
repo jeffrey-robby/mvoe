@@ -14,6 +14,23 @@ use Tests\TestCase;
  */
 class EcransParentTest extends TestCase
 {
+    public function test_la_base_parent_nexpose_aucun_accesseur(): void
+    {
+        // `{ ...baseParent() }` ÉVALUE les accesseurs au moment de
+        // l'étalement et n'en copie que la valeur. Un `get` dans cette base
+        // serait donc figé à la construction : le sélecteur de langue n'aurait
+        // éternellement affiché que la langue de repli, sans la moindre erreur.
+        // Les méthodes, elles, survivent à l'étalement. C'est arrivé une fois.
+        $front = File::get(resource_path('js/parent.js'));
+
+        $debut = strpos($front, 'function baseParent()');
+        $corps = substr($front, $debut, strpos($front, 'export function accueilParent') - $debut);
+
+        $this->assertSame(0, preg_match_all('/^\s{8}get \w+\(\)/m', $corps),
+            'Un accesseur dans `baseParent()` serait figé par l’étalement : '
+            .'utilisez une méthode.');
+    }
+
     private const ECRANS = [
         '/parent',
         '/parent/accueil',

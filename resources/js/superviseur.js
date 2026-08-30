@@ -86,6 +86,8 @@ export function connexionDelegation() {
                 sessionDelegation.ouvrir({
                     jeton: reponse.jeton,
                     nom: reponse.superviseur.nom,
+                    niveau: reponse.superviseur.niveau,
+                    portee: reponse.superviseur.portee,
                 });
 
                 window.location.href = '/superviseur';
@@ -101,7 +103,214 @@ export function connexionDelegation() {
     };
 }
 
+/**
+ * L'en-tête de la coquille.
+ *
+ * La coquille est rendue par le serveur, qui ne sait rien de la session : le
+ * jeton vit dans le navigateur. C'est donc ici qu'on inscrit la portée du
+ * compte. Elle n'est pas décorative : personne ne doit croire lire tout un
+ * département alors qu'il ne lit qu'un arrondissement.
+ */
+export function enteteDelegation() {
+    const session = sessionDelegation.lire();
+
+    return {
+        portee: session?.portee ?? null,
+        nom: session?.nom ?? null,
+        niveau: session?.niveau ?? null,
+
+        // Seul un superviseur d'arrondissement enregistre un facilitateur : le
+        // serveur le refuse aux autres niveaux. Autant ne pas leur proposer un
+        // écran dont la seule issue est un refus.
+        get peutEnregistrer() {
+            return this.niveau === 'arrondissement';
+        },
+    };
+}
+
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Le tableau de bord. Un seul, pour les cinq niveaux.
+ *
+ * Le serveur rend toujours la même forme : une portée, des indicateurs, et le
+ * découpage du niveau en dessous. Cet écran ne sait donc pas à quel niveau il
+ * est, et n'a pas besoin de le savoir — il affiche ce qu'on lui donne. C'est
+ * exactement ce que « un composant, cinq niveaux » veut dire côté interface.
+ *
+ * La descente ne recharge pas la page : elle rappelle la même route avec une
+ * cible. Le serveur vérifie que cette cible est dans la portée du compte ;
+ * l'écran ne décide de rien.
+ */
+export function tableauDeBord() {
+    return {
+        portee: null,
+        indicateurs: null,
+        decoupage: null,
+        fil: [],
+        seuilInactivite: null,
+        cible: null,
+        chargement: true,
+        erreur: null,
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            await this.charger();
+        },
+
+        async charger() {
+            this.chargement = true;
+            this.erreur = null;
+
+            try {
+                const donnees = await api.tableauDeBord(sessionDelegation.jeton(), this.cible);
+
+                this.portee = donnees.portee;
+                this.indicateurs = donnees.indicateurs;
+                this.decoupage = donnees.decoupage;
+                this.fil = donnees.fil ?? [];
+                this.seuilInactivite = donnees.seuil_inactivite_jours;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        /**
+         * Descendre d'un cran.
+         *
+         * Deux lignes ne s'ouvrent pas : un facilitateur, sous lequel il n'y a
+         * plus de territoire, et une région où le programme n'est pas déployé,
+         * sous laquelle il n'y a rien du tout. Descendre y mènerait à un
+         * tableau vide, qui se lit comme une panne.
+         */
+        async ouvrir(ligne) {
+            if (! this.ouvrable(ligne)) return;
+
+            this.cible = { niveau: this.decoupage.niveau, entite: ligne.id };
+            await this.charger();
+        },
+
+        ouvrable(ligne) {
+            return this.descendable && ligne.peuplee !== false;
+        },
+
+        async revenir(maillon) {
+            this.cible = maillon.niveau ? { niveau: maillon.niveau, entite: maillon.entite } : null;
+            await this.charger();
+        },
+
+        get descendable() {
+            return this.decoupage !== null && this.decoupage.niveau !== 'facilitateur';
+        },
+
+        /** Les nombres se lisent alignés ; « aucune donnée » se dit. */
+        nombre(valeur) {
+            return valeur === null || valeur === undefined
+                ? '—'
+                : String(valeur).replace('.', ',');
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * La file des signalements.
+ *
+ * Le systeme n'a prevenu personne : ces signalements attendent ici, dans la
+ * file d'un humain qui juge et decide. C'est deliberement l'ecran le plus
+ * simple de l'administration — une liste, un statut, une suite a ecrire.
+ *
+ * La suite donnee n'est pas un champ de confort : c'est ce que le facilitateur
+ * lira, et la seule raison pour laquelle il en fera un deuxieme.
+ */
+export function signalements() {
+    return {
+        portee: null,
+        synthese: null,
+        liste: [],
+        filtre: 'ouverts',
+        ouvert: null,
+        statut: 'examine',
+        suite: '',
+        chargement: true,
+        occupe: false,
+        erreur: null,
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            await this.charger();
+        },
+
+        async charger() {
+            this.chargement = true;
+            this.erreur = null;
+
+            try {
+                const donnees = await api.signalements(sessionDelegation.jeton());
+
+                this.portee = donnees.portee;
+                this.synthese = donnees.synthese;
+                this.liste = donnees.signalements;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        get affiches() {
+            return this.filtre === 'ouverts'
+                ? this.liste.filter((s) => s.ouvert)
+                : this.liste;
+        },
+
+        ouvrir(signalement) {
+            this.ouvert = signalement;
+            this.statut = signalement.ouvert ? 'examine' : signalement.statut;
+            this.suite = signalement.suite_donnee ?? '';
+        },
+
+        fermer() {
+            this.ouvert = null;
+            this.erreur = null;
+        },
+
+        /** Orienter ou clore sans ecrire la suite n'a pas de sens. */
+        get suiteRequise() {
+            return this.statut === 'oriente' || this.statut === 'clos';
+        },
+
+        get peutValider() {
+            return !this.suiteRequise || this.suite.trim() !== '';
+        },
+
+        async traiter() {
+            if (!this.peutValider || this.occupe) return;
+
+            this.occupe = true;
+            this.erreur = null;
+
+            try {
+                await api.traiterSignalement(sessionDelegation.jeton(), this.ouvert.id, {
+                    statut: this.statut,
+                    suite_donnee: this.suite.trim() || null,
+                });
+
+                this.fermer();
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+    };
+}
 
 /**
  * Le registre.
@@ -114,7 +323,7 @@ export function connexionDelegation() {
 export function registre() {
     return {
         nom: sessionDelegation.lire()?.nom ?? '',
-        perimetre: null,
+        portee: null,
         synthese: null,
         facilitateurs: [],
         arrondissement: '',
@@ -134,7 +343,7 @@ export function registre() {
             try {
                 const donnees = await api.registre(sessionDelegation.jeton());
 
-                this.perimetre = donnees.perimetre;
+                this.portee = donnees.portee;
                 this.synthese = donnees.synthese;
                 this.facilitateurs = donnees.facilitateurs;
             } catch (e) {
@@ -344,6 +553,108 @@ export function parametres() {
             await api.fermerSession(sessionDelegation.jeton()).catch(() => null);
             sessionDelegation.fermer();
             window.location.href = '/superviseur/connexion';
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enregistrement d'un facilitateur.
+ *
+ * Un facilitateur ne s'inscrit jamais lui-même : son superviseur l'enregistre et
+ * lui remet ses identifiants en main propre.
+ *
+ * Le formulaire ne demande NI arrondissement NI mot de passe. Le premier est
+ * celui du superviseur connecté, le second est généré côté serveur. Rien ici ne
+ * permet de créer un facilitateur ailleurs que chez soi.
+ */
+export function enregistrerFacilitateur() {
+    return {
+        nom: '',
+        telephone: '',
+        email: '',
+        typeJuridique: '',
+        organisation: '',
+        dateFormation: new Date().toISOString().slice(0, 10),
+
+        types: [],
+        resultat: null,
+        erreur: null,
+        erreurs: {},
+        occupe: false,
+
+        // La portée du compte, pour dire à qui cet écran s'adresse. Le serveur
+        // refuse de toute façon les autres niveaux ; c'est ici qu'on l'explique
+        // avant que quelqu'un ne remplisse le formulaire pour rien.
+        niveau: null,
+        portee: null,
+
+        get peutEnregistrer() {
+            return this.niveau === 'arrondissement';
+        },
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            const session = sessionDelegation.lire();
+            this.niveau = session?.niveau ?? null;
+            this.portee = session?.portee ?? null;
+
+            if (!this.peutEnregistrer) return;
+
+            try {
+                this.types = (await api.typesJuridiques(sessionDelegation.jeton())).types;
+            } catch (e) {
+                traiterErreur(this, e);
+            }
+        },
+
+        get peutValider() {
+            return this.nom.trim() !== ''
+                && this.telephone.trim() !== ''
+                && this.typeJuridique !== ''
+                && this.dateFormation !== '';
+        },
+
+        async valider() {
+            this.erreur = null;
+            this.erreurs = {};
+            this.occupe = true;
+
+            try {
+                this.resultat = await api.enregistrerFacilitateur(sessionDelegation.jeton(), {
+                    nom: this.nom.trim(),
+                    telephone: this.telephone.trim(),
+                    email: this.email.trim() || null,
+                    type_juridique: this.typeJuridique,
+                    organisation_rattachement: this.organisation.trim() || null,
+                    date_formation_initiale: this.dateFormation,
+                });
+            } catch (e) {
+                if (e.statut === 422) {
+                    this.erreurs = e.corps?.errors ?? {};
+                    this.erreur = 'Vérifiez les champs signalés.';
+                } else {
+                    traiterErreur(this, e);
+                }
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        /** Le superviseur recopie les identifiants ; l'impression les met au propre. */
+        imprimer() {
+            window.print();
+        },
+
+        recommencer() {
+            this.resultat = null;
+            this.nom = '';
+            this.telephone = '';
+            this.email = '';
+            this.typeJuridique = '';
+            this.organisation = '';
         },
     };
 }

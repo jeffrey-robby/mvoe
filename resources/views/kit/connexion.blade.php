@@ -16,6 +16,18 @@
             Vos identifiants vous ont été remis à la formation.
         </p>
 
+        {{-- Une session refusée n'est pas une panne : réessayer n'y changerait
+             rien, et la file resterait pleine sans que personne ne comprenne
+             pourquoi. On le dit, et on rassure sur ce qui est en attente. --}}
+        @if (request()->query('session') === 'expiree')
+            <div class="mt-4 rounded-carte bg-jaune-sourd px-4 py-3">
+                <p class="text-base">
+                    <strong>Votre session a expiré.</strong> Reconnectez-vous pour envoyer
+                    ce qui attend : rien n'a été perdu, tout est resté sur cet appareil.
+                </p>
+            </div>
+        @endif
+
         <form x-on:submit.prevent="valider()" class="mt-6 space-y-4">
 
             {{-- Voie 1 : le terrain --}}

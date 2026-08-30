@@ -79,12 +79,21 @@
         <template x-if="vue === 'unite' && unite">
             <div class="space-y-4">
 
-                <p class="text-2xl leading-snug" x-text="unite.message_cle"></p>
+                {{-- Le titre de la réalisation servie, PAS `message_cle`.
+                     `message_cle` n'existe qu'une fois, en français : c'est le
+                     champ que l'assistant interroge, pas un texte à montrer.
+                     L'afficher au-dessus d'un audio bulu ferait dire à l'écran
+                     une chose et à la voix une autre. --}}
+                <p class="text-2xl leading-snug"
+                   x-text="unite.realisation?.titre ?? unite.message_cle"></p>
 
-                {{-- Le repli sur le français est annoncé, jamais masqué. --}}
+                {{-- Le repli est annoncé, jamais masqué, et il NOMME la langue
+                     servie. Afficher du français en laissant croire que c'est
+                     du bulu serait pire que de ne rien afficher. --}}
                 <p x-show="versionManquante"
                    class="rounded-net bg-jaune-sourd px-3 py-2 text-base">
-                    Cette version n'existe pas encore. Voici la version française.
+                    Cette version n'existe pas encore dans votre langue.
+                    Voici la version en <span x-text="nomLangueServie"></span>.
                 </p>
 
                 {{-- Bascule audio ↔ texte + pictogrammes. Deux grandes cibles. --}}

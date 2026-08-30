@@ -103,7 +103,11 @@ class EspaceParentApiTest extends ApiTestCase
         $jeton = $this->jetonParent();
 
         $audio = $this->getJson('/api/parent/unites/1?langue=bulu&modalite=audio', $this->entete($jeton))->assertOk();
-        $this->assertSame('bulu', $audio->json('langue_servie'));
+
+        // Une langue est désormais une donnée, pas un code figé dans le code :
+        // l'API en rend le code ET le nom à afficher.
+        $this->assertSame('bulu', $audio->json('langue_servie.code'));
+        $this->assertFalse($audio->json('langue_de_repli'));
         $this->assertNotNull($audio->json('realisation.fichier_audio'));
 
         $texte = $this->getJson('/api/parent/unites/1?langue=bulu&modalite=texte_picto', $this->entete($jeton))->assertOk();
@@ -133,8 +137,16 @@ class EspaceParentApiTest extends ApiTestCase
 
     public function test_lannuaire_ne_renvoie_jamais_une_liste_vide(): void
     {
-        // Mengong n'a aucun facilitateur actif : on élargit au département
-        // plutôt que de renvoyer quelqu'un à rien.
+        // On construit la situation plutôt que de compter sur le jeu de
+        // données : tous les facilitateurs de Mengong deviennent inactifs.
+        $mengong = \App\Models\Arrondissement::where('libelle', 'Mengong')->firstOrFail();
+
+        \App\Models\Facilitateur::where('arrondissement_id', $mengong->id)
+            ->update(['derniere_activite' => null]);
+
+        // Un arrondissement sans facilitateur joignable est exactement ce que
+        // le registre doit révéler — et quelqu'un qui cherche de l'aide ne peut
+        // pas être renvoyé à rien pour autant.
         $reponse = $this->getJson('/api/annuaire?arrondissement=Mengong')->assertOk();
 
         $this->assertTrue($reponse->json('repli_departement'));

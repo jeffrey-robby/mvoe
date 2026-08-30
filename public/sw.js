@@ -23,7 +23,7 @@
 |
 */
 
-const VERSION = 'a35e4ebd6f78';
+const VERSION = '7ddea94088bf';
 
 const CACHES = {
     coquille: `mvoe-coquille-${VERSION}`,
@@ -33,8 +33,8 @@ const CACHES = {
 
 /** Injecté au build depuis le manifeste de Vite. */
 const RESSOURCES = [
-    "/build/assets/app-CpmPjF1F.css",
-    "/build/assets/app-CxqzS6_-.js",
+    "/build/assets/app-CIQ0grey.js",
+    "/build/assets/app-ChORF91_.css",
     "/build/assets/archivo-600-normal-3BBy0ZsW.woff2",
     "/build/assets/archivo-600-normal-DwYieO8P.woff",
     "/build/assets/archivo-700-normal-D9cHMWGj.woff2",
@@ -58,7 +58,17 @@ const RESSOURCES = [
 ];
 
 /** Les écrans du kit. Ce sont des coquilles vides : aucune donnée dedans. */
-const PAGES = ['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite'];
+/*
+| Les coquilles du kit, précachées à l'installation.
+|
+| « /kit/tableau-de-bord » en fait partie bien qu'il demande du réseau : sans sa
+| coquille, le facilitateur hors ligne tombe sur la page d'erreur du navigateur.
+| Avec elle, l'écran lui dit que ces chiffres viennent du serveur. Une phrase
+| vaut mieux qu'un dinosaure.
+*/
+const PAGES = ['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite',
+    '/kit/inscrire', '/kit/tableau-de-bord',
+    '/kit/activite', '/kit/visite', '/kit/signaler', '/kit/formation'];
 
 self.addEventListener('install', (evenement) => {
     evenement.waitUntil(

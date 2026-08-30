@@ -1,78 +1,187 @@
 @import 'tailwindcss';
 
 /*
-|------------------------------------------------------------------------------
+| Le template Vristo est conserve dans `template/` comme reference : on y lit
+| ses composants et ses reglages. Mais ses 106 vues ne sont PAS des sources de
+| l'application -- les scanner ferait passer la feuille de 16 a 215 Ko de
+| classes que personne n'utilise, dont un mode sombre entier.
+*/
+@source not "../../template";
+
+/*
+|==============================================================================
 | Système de design Mvoé
-|------------------------------------------------------------------------------
+|==============================================================================
 |
-| Trois couleurs, trois polices, une échelle généreuse. Rien d'autre.
+| DEUX SYSTÈMES QUI COHABITENT, et c'est délibéré.
 |
-| L'application sera lue en plein soleil, dans une salle sans électricité, par
-| quelqu'un qui tient son téléphone d'une main. Chaque décision ci-dessous vient
-| de là, pas d'un goût.
+| 1. L'ADMINISTRATION (MINPROFF, délégations) reprend le template Vristo :
+|    fond gris très clair, panneaux blancs à ombre douce, palette sémantique
+|    de sept couleurs, densité de bureau. C'est un outil qu'on utilise assis,
+|    à la souris, sur un grand écran.
+|
+| 2. LE TERRAIN (kit de séance, espace parent) garde le système Mvoé : jaune,
+|    blanc, noir, grands blocs, cibles de 48 px, corps de 17 px. C'est un
+|    outil qu'on tient d'une main, en plein soleil, dans une salle sans
+|    électricité. La grille du template n'y a pas sa place.
+|
+| Le passage de l'un à l'autre se fait par la classe `.terrain` sur <body>.
+|
+| CE QUI NE SE NÉGOCIE PAS, dans les deux systèmes :
+|   - la typographie : Archivo, IBM Plex Sans, IBM Plex Mono ;
+|   - le contraste : les couleurs sémantiques sont des SURFACES. Sur blanc,
+|     `warning` fait 2,2:1 et `success` 3,0:1 — elles échouent comme couleur
+|     de texte. Le texte reste sur `black` ou sur blanc ;
+|   - la colonne de séance et sa bande de brise-glace.
 |
 */
 
 @theme {
     /*
-    | Palette. Jaune, blanc, noir — aucune quatrième couleur, y compris pour
-    | dire « erreur » ou « succès ». Un état se dit par une forme et un mot.
+    |--------------------------------------------------------------------------
+    | Palette Vristo — l'administration
+    |--------------------------------------------------------------------------
+    |
+    | Sept couleurs sémantiques. Chacune existe en pleine (surface, bouton,
+    | badge) et en `-light` (fond de rappel très pâle, sur lequel du texte
+    | sombre reste lisible).
     */
-    --color-noir: #121212; /* texte, surfaces pleines */
-    --color-jaune: #f5c518; /* action, état actif, accent — SURFACE UNIQUEMENT */
-    --color-jaune-sourd: #fdf3d0; /* fonds de rappel, zones calmes */
-    --color-blanc: #ffffff;
-    --color-ligne: #e4e4e4; /* bordures */
-    --color-gris-texte: #6b6b6b; /* texte secondaire uniquement */
+    --color-primary: #4361ee;
+    --color-primary-light: #eaf1ff;
+
+    --color-secondary: #805dca;
+    --color-secondary-light: #ebe4f7;
+
+    --color-success: #00ab55;
+    --color-success-light: #ddf5f0;
+
+    --color-danger: #e7515a;
+    --color-danger-light: #fff5f5;
+
+    --color-warning: #e2a03f;
+    --color-warning-light: #fff9ed;
+
+    --color-info: #2196f3;
+    --color-info-light: #e7f7ff;
+
+    --color-dark: #3b3f5c;
+    --color-dark-light: #eaeaec;
+
+    /* Le seul noir sûr partout : 18,0:1 sur blanc. */
+    --color-black: #0e1726;
+    --color-black-light: #e3e4eb;
+
+    --color-white: #ffffff;
+    --color-white-light: #e0e6ed;
 
     /*
-    | Typographie.
+    | Le gris de texte secondaire. Vristo utilise #888ea8, qui ne fait que
+    | 3,2:1 sur blanc et échoue le seuil AA du texte courant. Assombri jusqu'à
+    | 4,8:1 en conservant sa teinte bleu-gris. L'accessibilité est un critère
+    | noté du concours, et cet écran sera lu en plein soleil.
+    */
+    --color-white-dark: #667292;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Les couleurs sémantiques en TEXTE
+    |--------------------------------------------------------------------------
     |
-    | Archivo pour les titres et les intitulés de section.
-    | IBM Plex Sans pour le corps : il tient bien les diacritiques françaises.
-    | IBM Plex Mono pour tout ce qui se compte — chronomètres, compteurs,
-    | durées, effectifs. Ce n'est pas décoratif : l'application est un
-    | instrument de mesure, et des chiffres alignés se lisent d'un coup d'œil.
+    | Les couleurs pleines sont des SURFACES. Posées en texte sur blanc, elles
+    | échouent : `warning` fait 2,2:1, `success` 3,0:1, `danger` 3,6:1 — le
+    | même piège que le jaune du système terrain, à l'identique.
+    |
+    | Ces trois variantes assombries existent pour le texte, et pour lui seul.
+    | `primary` n'en a pas besoin : il passe déjà à 4,8:1.
+    */
+    --color-success-texte: #007a3d;
+    --color-warning-texte: #8a5a00;
+    --color-danger-texte: #c02730;
+
+    /* Le fond de l'administration. */
+    --color-fond: #fafafa;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Palette Mvoé — le terrain
+    |--------------------------------------------------------------------------
+    |
+    | Conservée pour le kit de séance et l'espace parent. Le jaune reste une
+    | SURFACE : le texte qui s'y pose est noir, jamais l'inverse.
+    */
+    --color-noir: #121212;
+    --color-jaune: #f5c518;
+    --color-jaune-sourd: #fdf3d0;
+    --color-blanc: #ffffff;
+    --color-ligne: #e4e4e4;
+    --color-gris-texte: #6b6b6b;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Typographie — identique dans les deux systèmes
+    |--------------------------------------------------------------------------
+    |
+    | Archivo pour les titres. IBM Plex Sans pour le corps : il tient bien les
+    | diacritiques françaises. IBM Plex Mono pour tout ce qui se compte —
+    | chronomètres, compteurs, durées, effectifs, identifiants. Ce n'est pas
+    | décoratif : l'application est un instrument de mesure, et des chiffres
+    | alignés se lisent d'un coup d'œil.
     */
     --font-titre: 'Archivo', 'Segoe UI', system-ui, sans-serif;
     --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
 
     /*
-    | Échelle. Le corps ne descend jamais sous 17 px.
-    | `xs` existe pour les mentions légales, et pour rien d'autre.
+    |--------------------------------------------------------------------------
+    | Échelle
+    |--------------------------------------------------------------------------
+    |
+    | `base` vaut 15 px pour l'administration. Sur le terrain, `.terrain` le
+    | remonte à 17 px, qui est le plancher absolu du corps de texte là-bas.
     */
-    --text-xs: 0.8125rem; /* 13 px */
-    --text-sm: 0.9375rem; /* 15 px */
-    --text-base: 1.0625rem; /* 17 px — plancher du corps de texte */
-    --text-lg: 1.1875rem; /* 19 px */
-    --text-xl: 1.375rem; /* 22 px */
-    --text-2xl: 1.75rem; /* 28 px */
-    --text-3xl: 2.25rem; /* 36 px */
-    --text-4xl: 3rem; /* 48 px */
+    --text-xs: 0.75rem; /* 12 px — mentions, badges */
+    --text-sm: 0.8125rem; /* 13 px */
+    --text-base: 0.9375rem; /* 15 px */
+    --text-lg: 1.0625rem; /* 17 px */
+    --text-xl: 1.25rem; /* 20 px */
+    --text-2xl: 1.5rem; /* 24 px */
+    --text-3xl: 1.875rem; /* 30 px */
+    --text-4xl: 2.5rem; /* 40 px */
     --text-5xl: 4rem; /* 64 px — chronomètre de séance */
 
-    /*
-    | Cible tactile minimale : 48 px. Ce n'est pas une application de bureau,
-    | et le doigt qui appuie tient peut-être un enfant de l'autre bras.
-    */
+    /* Cible tactile minimale du terrain. Le doigt qui appuie tient
+       peut-être un enfant de l'autre bras. */
     --spacing-tactile: 3rem;
 
     --radius-net: 0.25rem;
     --radius-carte: 0.5rem;
+
+    /* L'ombre douce des panneaux Vristo. */
+    --shadow-panneau: 0 2px 2px rgb(224 230 237 / 46%), 1px 6px 7px rgb(224 230 237 / 46%);
 }
 
 @layer base {
     html {
         -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
     }
 
     body {
-        background-color: var(--color-blanc);
-        color: var(--color-noir);
+        background-color: var(--color-fond);
+        color: var(--color-black);
         font-family: var(--font-sans);
         font-size: var(--text-base);
         line-height: 1.55;
+    }
+
+    /*
+    | Le terrain. Fond blanc franc, corps à 17 px, densité relâchée : cet écran
+    | sera lu en plein soleil, tenu d'une main.
+    */
+    body.terrain {
+        background-color: var(--color-blanc);
+        color: var(--color-noir);
+        font-size: 1.0625rem;
     }
 
     h1,
@@ -86,8 +195,8 @@
     }
 
     /*
-    | Tous les chiffres sont tabulaires, partout, sans avoir à y penser :
-    | une colonne de durées ne doit pas danser quand un chiffre change.
+    | Tous les chiffres sont tabulaires, partout, sans avoir à y penser : une
+    | colonne de durées ne doit pas danser quand un chiffre change.
     */
     :where(time, output, .chiffre) {
         font-family: var(--font-mono);
@@ -99,14 +208,18 @@
     | critères notés du concours, pas une option.
     */
     :focus-visible {
-        outline: 3px solid var(--color-noir);
+        outline: 3px solid var(--color-black);
         outline-offset: 2px;
     }
 
-    /* Sur une surface noire, le liseré noir serait invisible. */
+    .terrain :focus-visible {
+        outline-color: var(--color-noir);
+    }
+
+    /* Sur une surface sombre, le liseré sombre serait invisible. */
     .sur-noir :focus-visible,
     .sur-noir:focus-visible {
-        outline-color: var(--color-blanc);
+        outline-color: var(--color-white);
     }
 
     [hidden],
@@ -116,17 +229,17 @@
 }
 
 /*
-|------------------------------------------------------------------------------
+|==============================================================================
 | Impression
-|------------------------------------------------------------------------------
+|==============================================================================
 |
 | Le livrable du superviseur est un DOCUMENT : un rapport trimestriel imprimé,
-| signé, transmis. « Enregistrer en PDF » depuis le navigateur doit produire
-| quelque chose qu'on ose poser sur un bureau — pas une capture d'écran.
+| signé, transmis. Et la fiche d'identifiants d'un facilitateur sera recopiée
+| ou glissée dans une pochette.
 |
-| Le jaune ne s'imprime pas : sur une imprimante monochrome de délégation, il
-| sortirait en gris pâle illisible. À l'impression, tout redevient noir sur
-| blanc, et les surfaces jaunes deviennent des encadrés au trait.
+| Rien ne s'imprime en couleur : sur une imprimante monochrome de délégation,
+| les aplats sortiraient en gris pâle illisibles. Tout redevient noir sur
+| blanc, et les surfaces colorées deviennent des encadrés au trait.
 |
 */
 
@@ -141,6 +254,7 @@
     }
 
     body {
+        background: #fff;
         font-size: 10.5pt;
         line-height: 1.4;
     }
@@ -148,6 +262,11 @@
     main {
         max-width: none;
         padding: 0;
+    }
+
+    .panel {
+        box-shadow: none;
+        border: 1px solid #121212;
     }
 
     /* Une ligne de tableau ne se coupe pas entre deux pages. */
@@ -161,10 +280,15 @@
         break-after: avoid;
     }
 
-    /* Les fonds de rappel deviennent des encadrés : le jaune ne s'imprime pas. */
     .bg-jaune,
-    .bg-jaune-sourd {
+    .bg-jaune-sourd,
+    [class*='bg-primary'],
+    [class*='bg-success'],
+    [class*='bg-warning'],
+    [class*='bg-danger'],
+    [class*='bg-info'] {
         background: transparent !important;
+        color: #121212 !important;
         border: 1px solid #121212;
     }
 
@@ -174,13 +298,177 @@
 }
 
 /*
-|------------------------------------------------------------------------------
-| La colonne de séance
-|------------------------------------------------------------------------------
+|==============================================================================
+| Composants de l'administration — repris du template
+|==============================================================================
+*/
+
+@layer components {
+    /* La surface de base de tous les écrans de délégation. */
+    .panel {
+        position: relative;
+        border-radius: 0.375rem;
+        background-color: var(--color-white);
+        padding: 1.25rem;
+        box-shadow: var(--shadow-panneau);
+    }
+
+    /*
+    | Les boutons. Le halo coloré sous le bouton plein est la signature
+    | visuelle du template ; il disparaît au survol.
+    */
+    .btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 1px solid transparent;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1.25rem;
+        font-family: var(--font-titre);
+        font-size: var(--text-base);
+        font-weight: 600;
+        outline: none;
+        transition: box-shadow 0.3s, background-color 0.2s, color 0.2s;
+    }
+
+    .btn:disabled,
+    .btn[disabled] {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .btn-primary {
+        border-color: var(--color-primary);
+        background-color: var(--color-primary);
+        color: var(--color-white);
+        box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--color-primary) 60%, transparent);
+    }
+
+    .btn-outline {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
+
+    .btn-outline:hover {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+    }
+
+    .btn-neutre {
+        border-color: var(--color-white-light);
+        background-color: var(--color-white);
+        color: var(--color-black);
+    }
+
+    .btn-neutre:hover {
+        background-color: var(--color-white-light);
+    }
+
+    .btn-danger {
+        border-color: var(--color-danger);
+        background-color: var(--color-danger);
+        color: var(--color-white);
+        box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--color-danger) 60%, transparent);
+    }
+
+    .btn:hover {
+        box-shadow: none;
+    }
+
+    /*
+    | Les badges. Toujours un LIBELLÉ, jamais une pastille de couleur seule :
+    | « Actif » et « Inactif » se lisent, y compris en noir et blanc et par
+    | quelqu'un qui distingue mal les couleurs.
+    */
+    .badge {
+        display: inline-block;
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.5rem;
+        font-family: var(--font-titre);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.04em;
+    }
+
+    .badge-succes {
+        background-color: var(--color-success-light);
+        color: var(--color-success-texte);
+    }
+
+    .badge-alerte {
+        background-color: var(--color-warning-light);
+        color: var(--color-warning-texte);
+    }
+
+    .badge-neutre {
+        background-color: var(--color-black-light);
+        color: var(--color-black);
+    }
+
+    /* Les tableaux de données. */
+    .tableau {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .tableau thead th {
+        border-bottom: 1px solid var(--color-white-light);
+        padding: 0.625rem 0.75rem;
+        font-family: var(--font-titre);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-white-dark);
+    }
+
+    .tableau tbody td {
+        border-bottom: 1px solid var(--color-white-light);
+        padding: 0.75rem;
+        vertical-align: top;
+    }
+
+    .tableau tbody tr:hover {
+        background-color: color-mix(in srgb, var(--color-white-light) 25%, transparent);
+    }
+
+    /* Les champs de formulaire. */
+    .champ {
+        width: 100%;
+        border: 1px solid var(--color-white-light);
+        border-radius: 0.375rem;
+        background-color: var(--color-white);
+        padding: 0.5rem 0.75rem;
+        font-size: var(--text-base);
+    }
+
+    .champ:focus {
+        border-color: var(--color-primary);
+        outline: none;
+    }
+
+    .etiquette {
+        display: block;
+        margin-bottom: 0.25rem;
+        font-family: var(--font-titre);
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-black);
+    }
+}
+
+/*
+|==============================================================================
+| La colonne de séance — l'élément signature
+|==============================================================================
 |
-| L'élément signature du produit. Les trois états sont définis ICI et nulle part
-| ailleurs : le composant Blade et le template Alpine posent tous les deux un
-| `data-etat`, et n'ont donc aucune façon de diverger.
+| Conservée telle quelle : le template ne s'applique pas ici. Les trois états
+| sont définis ICI et nulle part ailleurs — le composant Blade et le template
+| Alpine posent tous deux un `data-etat`, et n'ont donc aucune façon de
+| diverger.
 |
 | La hauteur vient de `--minutes` : chaque séquence occupe une hauteur
 | proportionnelle à sa durée officielle. La colonne est une échelle, pas une
@@ -222,15 +510,14 @@
     /*
     | Les états du pointage.
     |
-    | Quatre états, mais TROIS COULEURS seulement : ce sont les formes qui
-    | portent la distinction, pas une palette élargie.
+    | Quatre états, trois couleurs : ce sont les FORMES qui portent la
+    | distinction, jamais la couleur seule. Chaque pastille porte aussi un
+    | libellé écrit.
     |
     |     à pointer = contour pointillé   (rien n'a encore été dit)
     |     présent   = pastille noire pleine
     |     absent    = contour plein
     |     binôme    = pastille jaune, marquée d'un trait de liaison
-    |
-    | Et jamais la couleur seule : chaque pastille porte aussi un libellé écrit.
     */
     .pastille {
         display: block;
@@ -257,8 +544,7 @@
 
 /*
 | Intitulé court en capitales. Archivo n'étant chargé qu'en largeur normale,
-| l'effet « Expanded » du cahier des charges est obtenu par l'interlettrage —
-| approximation assumée, à remplacer si la variante Expanded est ajoutée.
+| l'effet « Expanded » est obtenu par l'interlettrage — approximation assumée.
 */
 @utility intitule {
     font-family: var(--font-titre);
@@ -270,7 +556,7 @@
 }
 
 /*
-| Bande pleine du brise-glace : l'outil se retire, la salle prend le relais.
+| La bande du brise-glace : l'outil se retire, la salle prend le relais.
 | Aucun contrôle, aucun chronomètre. Cette rupture visuelle porte la doctrine
 | du projet — tout ne se numérise pas.
 */

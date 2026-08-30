@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Enums\Modalite;
 use App\Enums\TypeSequence;
 use App\Models\CurriculumVersion;
@@ -155,24 +155,24 @@ class CurriculumSeeder extends Seeder
      */
     private function realisations(UniteDigitale $unite, int $rang, array $donnees): void
     {
-        foreach ([Langue::Fr, Langue::Bulu] as $langue) {
+        foreach (Langue::whereIn('code', ['fr', 'bulu'])->orderBy('ordre')->get() as $langue) {
             // Les textes bulu ne sont pas traduits : ils portent un marqueur
             // explicite. Inventer une traduction serait pire que l'absence.
-            $marque = $langue === Langue::Bulu ? '[BU] ' : '';
+            $marque = $langue->code === 'bulu' ? '[BU] ' : '';
 
             Realisation::create([
                 'unite_id' => $unite->id,
-                'langue' => $langue,
+                'langue_id' => $langue->id,
                 'modalite' => Modalite::Audio,
                 'titre' => $marque.$donnees['titre'],
                 'contenu_texte' => null,
-                'fichier_audio' => sprintf('audio/unites/m08-u%d-%s.wav', $rang, $langue->value),
+                'fichier_audio' => sprintf('audio/unites/m08-u%d-%s.wav', $rang, $langue->code),
                 'pictogrammes' => null,
             ]);
 
             Realisation::create([
                 'unite_id' => $unite->id,
-                'langue' => $langue,
+                'langue_id' => $langue->id,
                 'modalite' => Modalite::TextePicto,
                 'titre' => $marque.$donnees['titre'],
                 'contenu_texte' => $marque.$donnees['texte'],

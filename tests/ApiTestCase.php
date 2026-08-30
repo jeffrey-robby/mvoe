@@ -37,22 +37,37 @@ abstract class ApiTestCase extends TestCase
         ])->json('jeton');
     }
 
-    /** Delegation departementale : elle lit les huit arrondissements. */
-    protected function jetonSuperviseur(): string
+    /** Les quatre niveaux de la chaine administrative. */
+    protected function jetonDelegation(string $email): string
     {
         return $this->postJson('/api/superviseur/session', [
-            'email' => 'superviseur@mvoe.test',
-            'password' => 'mvoe-demo',
+            'email' => $email,
+            'password' => \Database\Seeders\ComptesSeeder::MOT_DE_PASSE,
         ])->json('jeton');
     }
 
-    /** Delegation d'arrondissement : elle ne lit qu'Ebolowa II. */
+    /** MINPROFF : les 10 regions, aucun filtre. */
+    protected function jetonNational(): string
+    {
+        return $this->jetonDelegation('minproff@mvoe.test');
+    }
+
+    /** Delegation regionale du Sud : 4 departements, 29 arrondissements. */
+    protected function jetonRegional(): string
+    {
+        return $this->jetonDelegation('sud@mvoe.test');
+    }
+
+    /** Delegation departementale de la Mvila : 8 arrondissements. */
+    protected function jetonSuperviseur(): string
+    {
+        return $this->jetonDelegation('mvila@mvoe.test');
+    }
+
+    /** Superviseur d'arrondissement : Ebolowa II seulement. */
     protected function jetonSuperviseurArrondissement(): string
     {
-        return $this->postJson('/api/superviseur/session', [
-            'email' => 'ebolowa2@mvoe.test',
-            'password' => 'mvoe-demo',
-        ])->json('jeton');
+        return $this->jetonDelegation('ebolowa-ii@mvoe.test');
     }
 
     protected function entete(string $jeton): array

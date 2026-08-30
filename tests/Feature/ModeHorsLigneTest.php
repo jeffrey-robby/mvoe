@@ -48,13 +48,29 @@ class ModeHorsLigneTest extends TestCase
         }
     }
 
-    public function test_le_service_worker_precache_les_cinq_ecrans_du_kit(): void
+    public function test_le_service_worker_precache_tous_les_ecrans_du_kit(): void
     {
+        // Ici on vérifie le fichier GÉNÉRÉ, pas le modèle : c'est celui-là que
+        // le navigateur installe. `KitFacilitateurTest` vérifie le modèle.
         $sw = File::get(public_path('sw.js'));
 
-        foreach (['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite'] as $page) {
+        foreach (['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite',
+            '/kit/inscrire', '/kit/tableau-de-bord'] as $page) {
             $this->assertStringContainsString("'$page'", $sw);
         }
+    }
+
+    public function test_la_version_du_service_worker_couvre_son_propre_modele(): void
+    {
+        // La version déclenche la purge du cache sur les appareils déjà
+        // installés. Si elle ne dépendait que de la liste des fichiers de build,
+        // ajouter une page à précacher ne la changerait pas : le téléphone du
+        // facilitateur garderait l'ancien cache et n'aurait jamais la nouvelle
+        // page. C'est-à-dire un écran blanc en séance, sans réseau.
+        $this->assertStringContainsString(
+            '.update(modele)',
+            File::get(base_path('scripts/generer-sw.mjs')),
+        );
     }
 
     public function test_lapi_nest_jamais_mise_en_cache(): void
@@ -96,6 +112,27 @@ class ModeHorsLigneTest extends TestCase
         // Accepté OU doublon : tout le reste est renvoyé. Un envoi coupé au
         // milieu peut donc être rejoué entier sans rien perdre ni dupliquer.
         $this->assertStringContainsString('[...bilan.acceptes, ...bilan.doublons]', $sync);
+    }
+
+    public function test_une_session_refusee_renvoie_a_la_connexion_sans_vider_la_file(): void
+    {
+        // Un 401 n'est pas une panne de réseau : réessayer n'y changera rien, et
+        // la file resterait pleine indéfiniment sans que personne ne comprenne.
+        // C'est la seule exception à la règle du silence.
+        $sync = File::get(resource_path('js/synchronisation.js'));
+
+        $this->assertStringContainsString('e?.statut === 401', $sync);
+        $this->assertStringContainsString('/kit/connexion?session=expiree', $sync);
+
+        // Et la déconnexion ne touche jamais la file : c'est la session qui a
+        // expiré, pas le travail qui est perdu.
+        $magasin = File::get(resource_path('js/magasin.js'));
+
+        $this->assertStringContainsString('jamais le paquet ni la file', $magasin);
+
+        // L'écran de connexion le dit, au lieu de laisser deviner.
+        $this->assertStringContainsString('Votre session a expir',
+            File::get(resource_path('views/kit/connexion.blade.php')));
     }
 
     public function test_aucune_erreur_reseau_nest_montree_au_facilitateur(): void

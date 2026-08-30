@@ -103,7 +103,11 @@ class SeanceSeeder extends Seeder
 
     public function run(ReceptionEvenements $reception): void
     {
-        $cohorte = Cohorte::with('parents', 'facilitateur')->firstOrFail();
+        // Explicitement celle de la démonstration : depuis que la région entière
+        // est peuplée, « la première cohorte » n'est plus une désignation sûre.
+        $cohorte = Cohorte::with('parents', 'facilitateur')
+            ->where('libelle', 'Ebolowa II — groupe du mardi')
+            ->firstOrFail();
         $module = $cohorte->curriculumVersion->modules()->where('numero', 8)->firstOrFail();
         $sequences = $module->sequences()->ordonnees()->get()->keyBy('ordre');
 

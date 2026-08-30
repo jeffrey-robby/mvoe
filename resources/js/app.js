@@ -1,11 +1,18 @@
 import Alpine from 'alpinejs';
-import { accueil, compteurSync, connexion, fidelite, pointage, seance } from './kit.js';
+import {
+    accueil, activiteTerrain, compteurSync, connexion, fidelite, inscrireParent,
+    formationFacilitateur, pointage, seance, signalerTerrain,
+    tableauDeBordFacilitateur, visiteDomicile,
+} from './kit.js';
 import { ouvrirMagasin } from './magasin.js';
 import {
     accueilParent, annuaireParent, assistantParent, ecouterParent,
     entreeParent, feuilletonParent, questionsSemaine,
 } from './parent.js';
-import { connexionDelegation, parametres, rapport, registre } from './superviseur.js';
+import {
+    connexionDelegation, enregistrerFacilitateur, enteteDelegation, parametres, rapport,
+    registre, signalements, tableauDeBord,
+} from './superviseur.js';
 import { demarrerSynchronisation } from './synchronisation.js';
 
 /*
@@ -24,9 +31,19 @@ Alpine.data('accueil', accueil);
 Alpine.data('seance', seance);
 Alpine.data('pointage', pointage);
 Alpine.data('fidelite', fidelite);
+Alpine.data('inscrireParent', inscrireParent);
+Alpine.data('tableauDeBordFacilitateur', tableauDeBordFacilitateur);
+Alpine.data('activiteTerrain', activiteTerrain);
+Alpine.data('visiteDomicile', visiteDomicile);
+Alpine.data('signalerTerrain', signalerTerrain);
+Alpine.data('formationFacilitateur', formationFacilitateur);
 
+Alpine.data('enteteDelegation', enteteDelegation);
 Alpine.data('connexionDelegation', connexionDelegation);
+Alpine.data('tableauDeBord', tableauDeBord);
 Alpine.data('registre', registre);
+Alpine.data('signalements', signalements);
+Alpine.data('enregistrerFacilitateur', enregistrerFacilitateur);
 Alpine.data('rapport', rapport);
 Alpine.data('parametres', parametres);
 

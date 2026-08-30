@@ -18,6 +18,12 @@ Route::view('/kit', 'kit.accueil')->name('kit.accueil');
 Route::view('/kit/connexion', 'kit.connexion')->name('kit.connexion');
 Route::view('/kit/seance', 'kit.seance')->name('kit.seance');
 Route::view('/kit/pointage', 'kit.pointage')->name('kit.pointage');
+Route::view('/kit/inscrire', 'kit.inscrire')->name('kit.inscrire');
+Route::view('/kit/tableau-de-bord', 'kit.tableau-de-bord')->name('kit.tableau-de-bord');
+Route::view('/kit/activite', 'kit.activite')->name('kit.activite');
+Route::view('/kit/visite', 'kit.visite')->name('kit.visite');
+Route::view('/kit/signaler', 'kit.signaler')->name('kit.signaler');
+Route::view('/kit/formation', 'kit.formation')->name('kit.formation');
 Route::view('/kit/fidelite', 'kit.fidelite')->name('kit.fidelite');
 
 /*
@@ -51,7 +57,12 @@ Route::view('/parent/facilitateur', 'parent.facilitateur')->name('parent.facilit
 |
 */
 Route::view('/superviseur', 'superviseur.registre')->name('superviseur.registre');
+Route::view('/superviseur/tableau-de-bord', 'superviseur.tableau-de-bord')
+    ->name('superviseur.tableau-de-bord');
 Route::view('/superviseur/connexion', 'superviseur.connexion')->name('superviseur.connexion');
+Route::view('/superviseur/enregistrer', 'superviseur.enregistrer')->name('superviseur.enregistrer');
+Route::view('/superviseur/signalements', 'superviseur.signalements')
+    ->name('superviseur.signalements');
 Route::view('/superviseur/rapport', 'superviseur.rapport')->name('superviseur.rapport');
 Route::view('/superviseur/parametres', 'superviseur.parametres')->name('superviseur.parametres');
 

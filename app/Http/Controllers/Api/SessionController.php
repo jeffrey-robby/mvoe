@@ -73,7 +73,7 @@ class SessionController extends Controller
             'facilitateur' => [
                 'id' => $facilitateur->id,
                 'nom' => $facilitateur->nom,
-                'arrondissement' => $facilitateur->arrondissement,
+                'arrondissement' => $facilitateur->arrondissement->libelle,
             ],
         ]);
     }
@@ -117,7 +117,8 @@ class SessionController extends Controller
             'expire_a' => $expiration->toIso8601String(),
             'parent' => [
                 'code_parent' => $parent->code_parent,
-                'langue_pref' => $parent->langue_pref->value,
+                // La langue du parent, pas celle de sa région.
+                'langue' => $parent->langue?->code,
             ],
         ]);
     }
@@ -142,9 +143,11 @@ class SessionController extends Controller
             'expire_a' => null,
             'superviseur' => [
                 'nom' => $user->name,
-                // `null` = délégation départementale : elle voit les huit
-                // arrondissements. Sinon le périmètre est borné à celui-ci.
-                'arrondissement' => $user->arrondissement,
+                // La portée dit à quel niveau ce compte lit, et ce qu'il
+                // couvre. L'écran l'affiche en clair : personne ne doit croire
+                // lire tout un département alors qu'il lit un arrondissement.
+                'niveau' => $user->niveau,
+                'portee' => $user->portee()->libelle,
             ],
         ]);
     }

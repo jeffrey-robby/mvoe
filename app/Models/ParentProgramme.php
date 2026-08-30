@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Langue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,11 +21,18 @@ use Laravel\Sanctum\HasApiTokens;
 class ParentProgramme extends Model
 {
     use HasApiTokens;
+    use \App\Models\Concerns\LimiteParPortee;
 
     protected $table = 'parents';
 
+    /** Un parent n'a pas d'arrondissement : il tient celui de sa cohorte. */
+    protected static function relaisDePortee(): ?array
+    {
+        return [Cohorte::class, 'cohorte_id'];
+    }
+
     protected $fillable = [
-        'cohorte_id', 'code_parent', 'code_acces', 'langue_pref',
+        'cohorte_id', 'code_parent', 'code_acces', 'langue_id',
         'statut_matrimonial', 'revenu_regularite', 'telephone_partage',
     ];
 
@@ -35,7 +41,6 @@ class ParentProgramme extends Model
     protected function casts(): array
     {
         return [
-            'langue_pref' => Langue::class,
             'telephone_partage' => 'boolean',
             // Le code a 4 chiffres est hache a l'ecriture : une copie de la base
             // ne suffit pas a entrer dans l'espace parent.
@@ -46,6 +51,17 @@ class ParentProgramme extends Model
     public function cohorte(): BelongsTo
     {
         return $this->belongsTo(Cohorte::class);
+    }
+
+    /**
+     * La langue du parent, pas celle de sa region.
+     *
+     * Un locuteur bulu installe dans l'Ocean recoit du bulu. C'est une
+     * propriete de la personne, jamais de l'endroit ou elle habite.
+     */
+    public function langue(): BelongsTo
+    {
+        return $this->belongsTo(Langue::class);
     }
 
     public function enfants(): HasMany

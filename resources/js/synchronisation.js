@@ -21,6 +21,12 @@ import { file, session } from './magasin.js';
 |      `acceptes` OU dans `doublons`. Tout le reste est renvoyé. Un envoi coupé
 |      au milieu peut donc être rejoué entier sans rien perdre ni dupliquer.
 |
+| Une seule exception à la première règle : une session refusée. Ce n'est pas
+| une panne de réseau, et réessayer n'y changera rien — la file resterait pleine
+| indéfiniment sans que personne ne comprenne pourquoi. On renvoie donc vers la
+| connexion, en gardant la file intacte : c'est la session qui a expiré, pas le
+| travail qui est perdu.
+|
 */
 
 /** Nouvel essai tant qu'il reste quelque chose à envoyer. */
@@ -80,6 +86,17 @@ export async function tenter() {
 
         return 'envoye';
     } catch (e) {
+        // Session refusée : la file ne partira plus tant que personne ne se
+        // reconnecte. Le seul cas où se taire serait nuisible.
+        if (e?.statut === 401 || e?.statut === 403) {
+            annoncer('session-expiree');
+            await session.fermer();
+
+            window.location.href = '/kit/connexion?session=expiree';
+
+            return 'session-expiree';
+        }
+
         // Hors ligne ou serveur injoignable : on ne dit rien, on réessaiera.
         annoncer(e instanceof ErreurHorsLigne ? 'hors-ligne' : 'differe');
 

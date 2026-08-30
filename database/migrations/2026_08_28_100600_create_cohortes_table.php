@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('cohortes', function (Blueprint $table) {
             $table->id();
             $table->string('libelle');
-            $table->string('arrondissement');
+            $table->foreignId('arrondissement_id')->constrained()->cascadeOnDelete();
             // Volontairement SANS valeur par defaut : le 20 ne doit exister
             // nulle part dans le code, seulement dans la donnee de chaque cohorte.
             $table->unsignedSmallInteger('ratio_max');

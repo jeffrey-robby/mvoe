@@ -12,11 +12,17 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * Le superviseur de la délégation d'arrondissement. C'est le seul compte du
- * système avec un mot de passe : le facilitateur ouvre un kit sur un téléphone,
- * le parent entre un code à 4 chiffres reçu en main propre.
+ * Un compte administratif, à l'un des quatre niveaux de la chaîne :
+ * MINPROFF, délégation régionale, délégation départementale, superviseur
+ * d'arrondissement.
+ *
+ * Personne ne s'auto-inscrit : chaque compte est créé par le niveau au-dessus,
+ * et `cree_par_id` garde cette chaîne vérifiable.
+ *
+ * Le facilitateur n'est pas un `user` : il a sa propre table et son propre mode
+ * d'authentification. Le parent non plus.
  */
-#[Fillable(['name', 'email', 'arrondissement', 'password'])]
+#[Fillable(['name', 'email', 'password', 'niveau', 'region_id', 'departement_id', 'arrondissement_id', 'cree_par_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -24,14 +30,43 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Périmètre de lecture. `null` = délégation départementale, qui voit les
-     * huit arrondissements de la Mvila. Sinon, la délégation ne voit que son
-     * propre arrondissement : l'écart d'un facilitateur se lit avec lui, et
-     * son supérieur direct est le seul à en avoir l'usage.
+     * Ce que ce compte a le droit de voir. Toute requête de données la traverse.
      */
-    public function voitToutLeDepartement(): bool
+    public function portee(): \App\Support\Portee
     {
-        return $this->arrondissement === null;
+        return \App\Support\Portee::pour($this);
+    }
+
+    public function region(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function departement(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Departement::class);
+    }
+
+    public function arrondissement(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Arrondissement::class);
+    }
+
+    /** Le compte qui a créé celui-ci. Null pour le seul compte racine. */
+    public function creePar(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cree_par_id');
+    }
+
+    /** Les comptes que ce compte a le droit de créer, et eux seuls. */
+    public function niveauQuIlPeutCreer(): ?string
+    {
+        return match ($this->niveau) {
+            'national' => 'region',
+            'region' => 'departement',
+            'departement' => 'arrondissement',
+            default => null,
+        };
     }
 
     /**

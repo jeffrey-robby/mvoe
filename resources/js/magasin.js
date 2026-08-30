@@ -109,6 +109,36 @@ export const paquet = {
     cohorte: () => memoire.paquet?.cohorte ?? null,
     parents: () => memoire.paquet?.parents ?? [],
     audios: () => memoire.paquet?.audios ?? [],
+    referentiel: () => memoire.paquet?.referentiel ?? null,
+    formation: () => memoire.paquet?.formation ?? [],
+
+    moduleFormation(code) {
+        return (memoire.paquet?.formation ?? []).find((m) => m.code === code) ?? null;
+    },
+
+    /**
+     * Les sections déjà lues d'un module.
+     *
+     * Le paquet apporte ce que le serveur savait ; les lectures faites hors
+     * ligne s'y ajoutent au fil de l'eau. Sans cette fusion, un facilitateur
+     * rouvrirait un module terminé en croyant n'y avoir jamais touché.
+     */
+    sectionsVues(code) {
+        return this.moduleFormation(code)?.sections_vues ?? [];
+    },
+
+    /** Une section lue, retenue localement même si l'envoi attend. */
+    async marquerSectionVue(code, ordre) {
+        const module = this.moduleFormation(code);
+
+        if (!module || module.sections_vues?.includes(ordre)) return;
+
+        module.sections_vues = [...(module.sections_vues ?? []), ordre].sort((a, b) => a - b);
+
+        await etat(CLES.paquet, memoire.paquet);
+    },
+    foyers: () => memoire.paquet?.foyers ?? [],
+    groupesSoutien: () => memoire.paquet?.groupes_soutien ?? [],
 
     module(id) {
         return memoire.paquet?.modules.find((m) => m.id === Number(id)) ?? null;
@@ -117,6 +147,48 @@ export const paquet = {
     async enregistrer(donnees) {
         await etat(CLES.paquet, donnees);
         memoire.paquet = donnees;
+    },
+
+    /**
+     * Ajoute un parent inscrit sur le terrain au paquet local.
+     *
+     * Sans cela, le facilitateur inscrirait quelqu'un et ne pourrait pas le
+     * pointer avant d'avoir retrouvé du réseau — alors que la personne est
+     * assise devant lui. Le paquet local est la seule vérité hors ligne : il
+     * doit connaître ce parent immédiatement.
+     */
+    async ajouterParent(parent) {
+        if (!memoire.paquet) return;
+
+        const donnees = {
+            ...memoire.paquet,
+            parents: [...memoire.paquet.parents, parent],
+        };
+
+        await etat(CLES.paquet, donnees);
+        memoire.paquet = donnees;
+    },
+
+    /**
+     * Le prochain code libre de la cohorte.
+     *
+     * Les codes suivent le lieu (« EB2-01 », « EB2-02 ») : on reprend le
+     * préfixe des codes existants et on prend le premier numéro non pris. Deux
+     * appareils du même facilitateur pourraient tirer le même ; la contrainte
+     * d'unicité en base rejette alors le second, qui ressort dans les
+     * « rejetés » de la remontée plutôt que de créer un doublon silencieux.
+     */
+    prochainCodeParent() {
+        const codes = this.parents().map((p) => p.code_parent);
+        const prefixe = codes[0]?.split('-')[0] ?? 'P';
+
+        const numeros = codes
+            .map((c) => Number.parseInt(c.split('-')[1], 10))
+            .filter((n) => Number.isInteger(n));
+
+        const suivant = numeros.length ? Math.max(...numeros) + 1 : 1;
+
+        return `${prefixe}-${String(suivant).padStart(2, '0')}`;
     },
 };
 
@@ -311,11 +383,147 @@ export const file = {
     },
 
     /**
+     * Une activite de terrain.
+     *
+     * L'arrondissement n'est PAS envoye : le serveur prend celui du compte du
+     * facilitateur. Rien de ce qui part d'ici ne doit pouvoir deposer une
+     * donnee hors de sa portee.
+     */
+    async enregistrerActivite(charge) {
+        return this.ajouter({ type: 'activite', seance_uuid: null, charge });
+    },
+
+    /**
+     * Un foyer, puis la visite qui vient de s'y derouler.
+     *
+     * Les deux partent ensemble : le serveur remet les inscriptions et les
+     * foyers en tete de file, la visite retrouve donc toujours son foyer.
+     */
+    async enregistrerVisite(foyer, visite) {
+        const evenementFoyer = await this.ajouter({
+            type: 'foyer', seance_uuid: null, charge: foyer,
+        });
+
+        await this.ajouter({
+            type: 'visite',
+            seance_uuid: null,
+            charge: { ...visite, foyer_uuid: evenementFoyer.uuid },
+        });
+
+        return evenementFoyer;
+    },
+
+    /** Une visite sur un foyer deja suivi. */
+    async enregistrerVisiteSurFoyer(foyerUuid, visite) {
+        return this.ajouter({
+            type: 'visite',
+            seance_uuid: null,
+            charge: { ...visite, foyer_uuid: foyerUuid },
+        });
+    },
+
+    /**
+     * La progression dans un module de formation.
+     *
+     * ROUVRIR UN MODULE EST UNE ACTIVITE : le serveur en fait avancer la
+     * derniere activite du facilitateur, donc il reste actif au registre.
+     * C'est le seul dispositif de reactivation qui ne coute ni deplacement,
+     * ni per diem, ni convocation.
+     */
+    async enregistrerProgression(code, sectionsVues) {
+        return this.ajouter({
+            type: 'progression_formation',
+            seance_uuid: null,
+            charge: {
+                module_code: code,
+                sections_vues: sectionsVues,
+                ouverte_a: new Date().toISOString(),
+            },
+        });
+    },
+
+    /**
+     * Un signalement. Il REMONTE, il ne declenche rien.
+     *
+     * Aucune identite n'est portee, et aucune autorite n'est prevenue : il
+     * entre dans la file du superviseur, qui juge.
+     */
+    async enregistrerSignalement(charge) {
+        return this.ajouter({ type: 'signalement', seance_uuid: null, charge });
+    },
+
+    /**
      * Ce que le compteur permanent affiche : le nombre de SÉANCES qui
      * attendent, pas le nombre d'événements. « 1 séance non synchronisée » se
      * comprend ; « 47 événements » ne veut rien dire pour un facilitateur.
+     *
+     * Seuls les événements RATTACHÉS à une séance comptent ici. Une inscription
+     * de parent n'appartient à aucune séance : la compter en ferait afficher
+     * « 1 séance non synchronisée » alors qu'aucune séance n'a eu lieu, et le
+     * facilitateur chercherait une séance qui n'existe pas.
      */
     seancesEnAttente() {
-        return new Set(memoire.file.map((e) => e.seance_uuid ?? e.uuid)).size;
+        const rattaches = memoire.file
+            .filter((e) => e.type === 'seance' || e.seance_uuid)
+            .map((e) => e.seance_uuid ?? e.uuid);
+
+        return new Set(rattaches).size;
+    },
+
+    /**
+     * Ce qui attend, nommé par nature.
+     *
+     * Le compteur doit dire ce qu'il compte. « 1 séance non synchronisée »
+     * pour une causerie enverrait le facilitateur chercher une séance qui
+     * n'existe pas ; « 3 événements » ne voudrait rien dire pour lui.
+     *
+     * @returns {Array<{n: number, un: string, plusieurs: string}>}
+     */
+    resumeEnAttente() {
+        const horsSeance = memoire.file.filter((e) => e.type !== 'seance' && !e.seance_uuid);
+
+        const compter = (type) => horsSeance.filter((e) => e.type === type).length;
+
+        const categories = [
+            { n: this.seancesEnAttente(), un: 'séance', plusieurs: 'séances' },
+            { n: compter('inscription_parent'), un: 'inscription', plusieurs: 'inscriptions' },
+            { n: compter('activite'), un: 'activité', plusieurs: 'activités' },
+            // Un foyer et sa visite partent ensemble : on compte la visite, qui
+            // est le geste, et non le dossier qu'elle a fait naître.
+            { n: compter('visite'), un: 'visite', plusieurs: 'visites' },
+            { n: compter('groupe_soutien'), un: 'groupe', plusieurs: 'groupes' },
+            { n: compter('signalement'), un: 'signalement', plusieurs: 'signalements' },
+            { n: compter('progression_formation'), un: 'module lu', plusieurs: 'modules lus' },
+        ];
+
+        return categories.filter((c) => c.n > 0);
+    },
+
+    /** Le total à envoyer, tous types confondus. */
+    totalEnAttente() {
+        const foyers = memoire.file.filter((e) => e.type === 'foyer').length;
+
+        // Le foyer voyage avec sa visite : le compter séparément ferait dire
+        // « 2 à envoyer » pour une seule visite à domicile.
+        return this.seancesEnAttente()
+            + memoire.file.filter((e) => e.type !== 'seance' && !e.seance_uuid).length
+            - foyers;
+    },
+
+    /**
+     * Inscription d'un parent, hors ligne.
+     *
+     * Le code à quatre chiffres est tiré ICI, sur l'appareil : le facilitateur
+     * doit pouvoir le remettre en main propre séance tenante, sans attendre
+     * d'avoir retrouvé du réseau. Il ne repartira jamais du serveur — celui-ci
+     * ne le stocke que haché, et le journal ne le conserve pas du tout.
+     */
+    async inscrireParent(cohorteId, codeParent, codeAcces, profil) {
+        return this.ajouter({
+            type: 'inscription_parent',
+            seance_uuid: null,
+            charge: { cohorte_id: cohorteId, code_parent: codeParent,
+                code_acces: codeAcces, ...profil },
+        });
     },
 };

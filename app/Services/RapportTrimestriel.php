@@ -26,30 +26,27 @@ use Illuminate\Support\Collection;
 class RapportTrimestriel
 {
     /**
-     * @param  ?string  $arrondissement  Périmètre de la délégation. `null` pour
-     *                                   la délégation départementale, qui lit
-     *                                   les huit arrondissements de la Mvila.
+     * @param  \App\Support\Portee  $portee  Ce que ce compte a le droit de lire.
+     *                                        Le même rapport sert les quatre
+     *                                        niveaux ; seule la portée change.
      */
-    public function pour(int $annee, int $trimestre, ?string $arrondissement = null): array
+    public function pour(int $annee, int $trimestre, \App\Support\Portee $portee): array
     {
         $debut = Carbon::create($annee, ($trimestre - 1) * 3 + 1, 1)->startOfDay();
         $fin = $debut->copy()->addMonths(3)->subDay()->endOfDay();
 
+        // Une délégation ne lit que les séances de sa portée : l'écart d'un
+        // facilitateur se lit avec lui, et sa hiérarchie directe est la seule
+        // à en avoir l'usage. Une séance tient l'arrondissement de sa cohorte.
         $seances = Seance::with('facilitateur', 'cohorte', 'module')
             ->whereBetween('date', [$debut->toDateString(), $fin->toDateString()])
-            // Une délégation d'arrondissement ne lit que ses propres séances :
-            // l'écart d'un facilitateur se lit avec lui, et son supérieur
-            // direct est le seul à en avoir l'usage.
-            ->when($arrondissement !== null,
-                fn ($q) => $q->whereRelation('cohorte', 'arrondissement', $arrondissement))
+            ->dansLaPortee($portee)
             ->get();
 
-        $facilitateurs = Facilitateur::query()
-            ->when($arrondissement !== null, fn ($q) => $q->where('arrondissement', $arrondissement))
-            ->get();
+        $facilitateurs = Facilitateur::dansLaPortee($portee)->get();
 
         return [
-            'perimetre' => $arrondissement ?? 'Département de la Mvila',
+            'portee' => ['niveau' => $portee->niveau, 'libelle' => $portee->libelle],
             'periode' => [
                 'annee' => $annee,
                 'trimestre' => $trimestre,
@@ -107,7 +104,7 @@ class RapportTrimestriel
             ->get()
             ->map(fn (Cohorte $c) => [
                 'libelle' => $c->libelle,
-                'arrondissement' => $c->arrondissement,
+                'arrondissement' => $c->arrondissement?->libelle,
                 'ratio_max' => $c->ratio_max,
                 'effectif' => $c->parents_count,
                 'places_restantes' => $c->placesRestantes(),
@@ -131,7 +128,7 @@ class RapportTrimestriel
 
                 return [
                     'nom' => $facilitateur->nom,
-                    'arrondissement' => $facilitateur->arrondissement,
+                    'arrondissement' => $facilitateur->arrondissement?->libelle,
                     'seances' => $lot->count(),
                     'sequences_declarees_realisees' => $declarees,
                     'ecarts' => $ecarts->count(),

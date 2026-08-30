@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\Langue;
 use App\Enums\Modalite;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,12 +38,36 @@ class UniteDigitale extends Model
      * Renvoie null plutot qu'un contenu invente : l'interface doit savoir dire
      * qu'une version manque, pas la remplacer par autre chose.
      */
+    /**
+     * La realisation demandee, ou celle de la langue de repli.
+     *
+     * Le repli n'est jamais silencieux : l'appelant compare `langue_id` a ce
+     * qu'il avait demande et le dit au parent. Afficher du francais en laissant
+     * croire que c'est du bulu serait pire que de ne rien afficher.
+     */
     public function realisation(Langue $langue, Modalite $modalite): ?Realisation
     {
         return $this->realisations
-            ->firstWhere(fn (Realisation $r) => $r->langue === $langue && $r->modalite === $modalite)
-            ?? $this->realisations
-                ->firstWhere(fn (Realisation $r) => $r->langue === Langue::Fr && $r->modalite === $modalite);
+            ->firstWhere(fn (Realisation $r) => $r->langue_id === $langue->id
+                && $r->modalite === $modalite);
+    }
+
+    /**
+     * Les langues dans lesquelles cette unite existe VRAIMENT.
+     *
+     * L'interface parent ne propose que celles-la. Proposer une langue qui
+     * n'est pas chargee, c'est promettre un contenu qui n'existe pas.
+     *
+     * @return \Illuminate\Support\Collection<int, Langue>
+     */
+    public function languesDisponibles(): \Illuminate\Support\Collection
+    {
+        return $this->realisations
+            ->map(fn (Realisation $r) => $r->langue)
+            ->filter()
+            ->unique('id')
+            ->sortBy('ordre')
+            ->values();
     }
 
     /**

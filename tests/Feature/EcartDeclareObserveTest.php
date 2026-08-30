@@ -49,19 +49,46 @@ class EcartDeclareObserveTest extends TestCase
             ]);
         }
 
+        // La hiérarchie minimale : tout se rattache à un arrondissement, et un
+        // facilitateur ne peut exister sans le superviseur qui l'a enregistré.
+        //
+        // Libellés propres à ce test : la base de test porte déjà le découpage
+        // réel, et réutiliser « Sud » entrerait en collision avec lui.
+        $region = \App\Models\Region::create([
+            'code' => 'ZZ', 'libelle' => 'Région de test', 'peuplee' => true,
+        ]);
+        $departement = \App\Models\Departement::create([
+            'region_id' => $region->id, 'libelle' => 'Département de test',
+        ]);
+        $arrondissement = \App\Models\Arrondissement::create([
+            'departement_id' => $departement->id,
+            'region_id' => $region->id,
+            'libelle' => 'Arrondissement de test',
+        ]);
+
+        $superviseur = \App\Models\User::create([
+            'name' => 'Superviseur de test',
+            'email' => 'superviseur.test@mvoe.test',
+            'password' => 'mot-de-passe-de-test',
+            'niveau' => 'arrondissement',
+            'arrondissement_id' => $arrondissement->id,
+        ]);
+
         $facilitateur = \App\Models\Facilitateur::create([
             'nom' => 'Test',
             'telephone' => '600000000',
             'code_appareil' => '123456',
             'email' => 'test@minproff.cm',
             'password' => 'mot-de-passe-de-test',
-            'arrondissement' => 'Ebolowa II',
-            'date_formation' => '2025-01-01',
+            'arrondissement_id' => $arrondissement->id,
+            'superviseur_id' => $superviseur->id,
+            'type_juridique' => \App\Enums\TypeJuridique::AgentPublic,
+            'date_formation_initiale' => '2025-01-01',
         ]);
 
         $cohorte = \App\Models\Cohorte::create([
             'libelle' => 'Test',
-            'arrondissement' => 'Ebolowa II',
+            'arrondissement_id' => $arrondissement->id,
             'ratio_max' => 20,
             'curriculum_version_id' => $version->id,
             'facilitateur_id' => $facilitateur->id,

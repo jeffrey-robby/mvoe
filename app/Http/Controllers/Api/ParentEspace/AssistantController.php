@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\ParentEspace;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Enums\Modalite;
 use App\Http\Controllers\Controller;
 use App\Models\Facilitateur;
@@ -25,14 +25,17 @@ use Illuminate\Http\Request;
  */
 class AssistantController extends Controller
 {
+    use ResoutLaLangue;
+
     public function situations(Request $request): JsonResponse
     {
-        $langue = Langue::tryFrom((string) $request->query('langue')) ?? $request->user()->langue_pref;
+        $langue = $this->langueDemandee($request);
 
-        $situations = SituationFrequente::where('langue', $langue)->ordonnees()->get();
+        $situations = SituationFrequente::where('langue_id', $langue->id)->ordonnees()->get();
 
         if ($situations->isEmpty()) {
-            $situations = SituationFrequente::where('langue', Langue::Fr)->ordonnees()->get();
+            $situations = SituationFrequente::where('langue_id', Langue::parDefaut()->id)
+                ->ordonnees()->get();
         }
 
         return response()->json([
@@ -70,7 +73,8 @@ class AssistantController extends Controller
 
     private function reponse(ResultatAppariement $resultat, Request $request): array
     {
-        $langue = Langue::tryFrom((string) $request->input('langue')) ?? $request->user()->langue_pref;
+        $langue = $this->langueDemandee($request);
+        $repli = Langue::parDefaut();
         $unite = $resultat->unite->load('realisations', 'module', 'sequence');
 
         return [
@@ -82,9 +86,11 @@ class AssistantController extends Controller
             'reponse' => $unite->message_cle,
             'reference' => $unite->reference(),
             'module' => ['numero' => $unite->module->numero, 'titre' => $unite->module->titre],
-            'texte' => $unite->realisation($langue, Modalite::TextePicto)?->contenu_texte,
-            'pictogrammes' => $unite->realisation($langue, Modalite::TextePicto)?->pictogrammes,
-            'fichier_audio' => ($audio = $unite->realisation($langue, Modalite::Audio)?->fichier_audio)
+            'texte' => ($texte = $unite->realisation($langue, Modalite::TextePicto)
+                ?? $unite->realisation($repli, Modalite::TextePicto))?->contenu_texte,
+            'pictogrammes' => $texte?->pictogrammes,
+            'fichier_audio' => ($audio = ($unite->realisation($langue, Modalite::Audio)
+                ?? $unite->realisation($repli, Modalite::Audio))?->fichier_audio)
                 ? asset($audio)
                 : null,
         ];
@@ -92,16 +98,19 @@ class AssistantController extends Controller
 
     private function refus(ResultatAppariement $resultat, Request $request): array
     {
-        $arrondissement = $request->user()->cohorte->arrondissement;
+        $arrondissementId = $request->user()->cohorte->arrondissement_id;
 
         // Un contact humain, jamais un signalement : le système affiche un
         // numéro, il n'alerte personne et ne déclenche aucune procédure.
-        $contacts = Facilitateur::where('arrondissement', $arrondissement)->get()->filter->estActif();
+        $contacts = Facilitateur::where('arrondissement_id', $arrondissementId)
+            ->with('arrondissement:id,libelle')
+            ->get()
+            ->filter->estActif();
 
         // Un refus sans contact serait une impasse. Si l'arrondissement n'a
         // aucun facilitateur actif, on élargit au département.
         if ($contacts->isEmpty()) {
-            $contacts = Facilitateur::orderBy('arrondissement')->get()->filter->estActif();
+            $contacts = Facilitateur::with('arrondissement:id,libelle')->get()->filter->estActif();
         }
 
         return [
@@ -112,7 +121,7 @@ class AssistantController extends Controller
             'contacts' => $contacts->map(fn (Facilitateur $f) => [
                 'nom' => $f->nom,
                 'telephone' => $f->telephone,
-                'arrondissement' => $f->arrondissement,
+                'arrondissement' => $f->arrondissement->libelle,
             ])->values()->all(),
         ];
     }

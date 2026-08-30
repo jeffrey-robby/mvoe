@@ -35,7 +35,17 @@ const CACHES = {
 const RESSOURCES = __RESSOURCES__;
 
 /** Les écrans du kit. Ce sont des coquilles vides : aucune donnée dedans. */
-const PAGES = ['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite'];
+/*
+| Les coquilles du kit, précachées à l'installation.
+|
+| « /kit/tableau-de-bord » en fait partie bien qu'il demande du réseau : sans sa
+| coquille, le facilitateur hors ligne tombe sur la page d'erreur du navigateur.
+| Avec elle, l'écran lui dit que ces chiffres viennent du serveur. Une phrase
+| vaut mieux qu'un dinosaure.
+*/
+const PAGES = ['/kit', '/kit/connexion', '/kit/seance', '/kit/pointage', '/kit/fidelite',
+    '/kit/inscrire', '/kit/tableau-de-bord',
+    '/kit/activite', '/kit/visite', '/kit/signaler', '/kit/formation'];
 
 self.addEventListener('install', (evenement) => {
     evenement.waitUntil(

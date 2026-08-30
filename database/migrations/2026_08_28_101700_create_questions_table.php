@@ -11,14 +11,13 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('unite_id')->constrained('unites_digitales')->cascadeOnDelete();
-            // Le TEXTE de la question vit dans `questions_traduites`, une ligne
-            // par langue -- meme separation que unites_digitales / realisations.
-            //
-            // La structure reste ici, et elle est commune a toutes les langues :
-            // c'est ce qui permet aux compteurs agreges de rester comparables.
-            // Si chaque langue avait ses propres questions, on ne saurait plus
-            // combien de parents ont choisi une option, seulement combien l'ont
-            // choisie EN FRANCAIS.
+            $table->text('enonce');
+            $table->string('enonce_audio')->nullable();
+            // Ce que propose le programme, et pourquoi. Porte par la QUESTION et
+            // non par l'option : le texte lu est le meme quelle que soit la
+            // reponse du parent. C'est la traduction en base de « jamais de
+            // verdict, jamais de score ».
+            $table->text('explication');
             $table->unsignedTinyInteger('ordre');
             $table->timestamps();
         });

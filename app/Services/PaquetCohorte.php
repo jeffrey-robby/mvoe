@@ -2,10 +2,19 @@
 
 namespace App\Services;
 
+use App\Enums\DifficulteFonctionnelle;
+use App\Enums\GraviteSignalement;
+use App\Enums\TypeActivite;
+use App\Enums\TypeSignalement;
 use App\Models\Binome;
 use App\Models\Cohorte;
+use App\Models\Foyer;
+use App\Models\GroupeSoutien;
+use App\Models\ModuleFormation;
+use App\Models\ProgressionFormation;
 use App\Models\Module;
 use App\Models\Realisation;
+use App\Models\SectionFormation;
 use App\Models\Sequence;
 use App\Models\UniteDigitale;
 use Illuminate\Support\Carbon;
@@ -42,7 +51,7 @@ class PaquetCohorte
             'cohorte' => [
                 'id' => $cohorte->id,
                 'libelle' => $cohorte->libelle,
-                'arrondissement' => $cohorte->arrondissement,
+                'arrondissement' => $cohorte->arrondissement?->libelle,
                 'ratio_max' => $cohorte->ratio_max,
                 'date_debut' => $cohorte->date_debut->toDateString(),
                 'curriculum_version' => [
@@ -53,14 +62,113 @@ class PaquetCohorte
             'modules' => $modules->map(fn (Module $m) => $this->module($m))->all(),
             'parents' => $cohorte->parents->map(fn ($p) => [
                 'code_parent' => $p->code_parent,
-                'langue_pref' => $p->langue_pref->value,
+                'langue' => $p->langue?->code,
                 'statut_matrimonial' => $p->statut_matrimonial,
                 'revenu_regularite' => $p->revenu_regularite,
                 'telephone_partage' => $p->telephone_partage,
             ])->values()->all(),
             'binomes' => $this->binomes($cohorte),
+
+            /*
+            | Le vocabulaire du terrain, embarqué avec le paquet.
+            |
+            | Sans lui, les écrans d'activité, de visite et de signalement
+            | devraient recopier ces listes en dur : elles finiraient par
+            | diverger des enums du serveur, et l'écart ne se verrait qu'en
+            | mode avion, c'est-à-dire nulle part avant le terrain.
+            */
+            'referentiel' => [
+                'types_activite' => $this->options(TypeActivite::cases()),
+                'types_signalement' => $this->options(TypeSignalement::cases()),
+                'gravites' => $this->options(GraviteSignalement::cases()),
+                'difficultes_fonctionnelles' => $this->options(DifficulteFonctionnelle::cases()),
+            ],
+
+            // Ses foyers déjà suivis, pour qu'une seconde visite se rattache au
+            // bon dossier sans réseau. Toujours aucun nom : une localité.
+            'foyers' => $this->foyers($cohorte),
+            'groupes_soutien' => $this->groupes($cohorte),
+
+            /*
+            | Ses modules de formation, texte compris.
+            |
+            | On révise dans un car, sur un banc, en attendant que la salle se
+            | remplisse — c'est-à-dire sans réseau. Un catalogue de formation
+            | qui exige une connexion ne sert qu'à ceux qui n'en ont pas besoin.
+            |
+            | Seuls les modules VALIDÉS y entrent : `diffusables()` est le seul
+            | chemin par lequel un module atteint un facilitateur.
+            */
+            'formation' => $this->formation($cohorte->facilitateur_id),
+
             'audios' => $this->audios($modules),
         ];
+    }
+
+    /** @param array<int, \BackedEnum> $cas */
+    private function options(array $cas): array
+    {
+        return array_map(fn ($c) => ['valeur' => $c->value, 'libelle' => $c->libelle()], $cas);
+    }
+
+    private function foyers(Cohorte $cohorte): array
+    {
+        if ($cohorte->facilitateur_id === null) {
+            return [];
+        }
+
+        return Foyer::where('facilitateur_id', $cohorte->facilitateur_id)
+            ->orderBy('localite')
+            ->get()
+            ->map(fn (Foyer $f) => [
+                'uuid' => $f->uuid,
+                'localite' => $f->localite,
+                'nb_adultes' => $f->nb_adultes,
+                'nb_enfants' => $f->nb_enfants,
+                'difficultes' => $f->difficultes_fonctionnelles_foyer,
+                'deja_suivi_programme' => $f->deja_suivi_programme,
+            ])->values()->all();
+    }
+
+    private function formation(?int $facilitateurId): array
+    {
+        // Ce qu'il a déjà lu part avec le paquet : sans cela, un facilitateur
+        // hors ligne rouvrirait un module terminé en croyant n'y avoir jamais
+        // touché, et sa progression repartirait de zéro à chaque paquet.
+        $vues = $facilitateurId === null
+            ? collect()
+            : ProgressionFormation::where('facilitateur_id', $facilitateurId)
+                ->pluck('sections_vues', 'module_formation_id');
+
+        return ModuleFormation::diffusables()->with('sections')->get()
+            ->map(fn (ModuleFormation $m) => [
+                'sections_vues' => $vues->get($m->id, []),
+                'code' => $m->code,
+                'titre' => $m->titre,
+                'type' => $m->type->value,
+                'type_libelle' => $m->type->libelle(),
+                'objectif' => $m->objectif,
+                'duree_minutes' => $m->duree_minutes,
+                'sections' => $m->sections->map(fn (SectionFormation $s) => [
+                    'ordre' => $s->ordre,
+                    'titre' => $s->titre,
+                    'contenu_texte' => $s->contenu_texte,
+                    'duree_minutes' => $s->duree_minutes,
+                    'fichier_audio' => $s->fichier_audio ? asset($s->fichier_audio) : null,
+                ])->values()->all(),
+            ])->values()->all();
+    }
+
+    private function groupes(Cohorte $cohorte): array
+    {
+        return GroupeSoutien::where('cohorte_id', $cohorte->id)
+            ->orderBy('libelle')
+            ->get()
+            ->map(fn (GroupeSoutien $g) => [
+                'uuid' => $g->uuid,
+                'libelle' => $g->libelle,
+                'derniere_reunion' => $g->derniere_reunion?->toDateString(),
+            ])->values()->all();
     }
 
     private function module(Module $module): array
@@ -105,7 +213,7 @@ class PaquetCohorte
     private function realisation(Realisation $realisation): array
     {
         return [
-            'langue' => $realisation->langue->value,
+            'langue' => $realisation->langue?->code,
             'modalite' => $realisation->modalite->value,
             'titre' => $realisation->titre,
             'contenu_texte' => $realisation->contenu_texte,

@@ -23,9 +23,9 @@ class RapportController extends Controller
         return response()->json($rapport->pour(
             $donnees['annee'],
             $donnees['trimestre'],
-            // Le périmètre vient du compte, jamais de la requête : on ne peut
-            // pas élargir sa lecture en changeant un paramètre d'URL.
-            $request->user()->arrondissement,
+            // La portée vient du compte, jamais de la requête : on ne peut pas
+            // élargir sa lecture en changeant un paramètre d'URL.
+            $request->user()->portee(),
         ));
     }
 }

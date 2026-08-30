@@ -23,11 +23,10 @@ class AnnuaireController extends Controller
     public function arrondissements(): JsonResponse
     {
         return response()->json([
-            'arrondissements' => Facilitateur::query()
-                ->select('arrondissement')
-                ->distinct()
-                ->orderBy('arrondissement')
-                ->pluck('arrondissement'),
+            // Tous les arrondissements du decoupage, pas seulement ceux qui
+            // ont deja un facilitateur : quelqu'un doit pouvoir chercher chez
+            // lui meme si personne n'y est encore actif.
+            'arrondissements' => \App\Models\Arrondissement::orderBy('libelle')->pluck('libelle'),
         ]);
     }
 
@@ -39,7 +38,12 @@ class AnnuaireController extends Controller
 
         // On ne propose que des facilitateurs joignables : afficher le numéro
         // de quelqu'un qui n'anime plus serait pire que rien.
-        $contacts = Facilitateur::where('arrondissement', $donnees['arrondissement'])
+        $arrondissement = \App\Models\Arrondissement::where('libelle', $donnees['arrondissement'])->first();
+
+        $contacts = Facilitateur::query()
+            ->when($arrondissement, fn ($q) => $q->where('arrondissement_id', $arrondissement->id))
+            ->when(! $arrondissement, fn ($q) => $q->whereRaw('1 = 0'))
+            ->with('arrondissement:id,libelle')
             ->orderBy('nom')
             ->get()
             ->filter->estActif();
@@ -53,7 +57,9 @@ class AnnuaireController extends Controller
         $repli = $contacts->isEmpty();
 
         if ($repli) {
-            $contacts = Facilitateur::orderBy('arrondissement')->orderBy('nom')->get()->filter->estActif();
+            $contacts = Facilitateur::with('arrondissement:id,libelle')->orderBy('nom')->get()
+                ->filter->estActif()
+                ->sortBy(fn (Facilitateur $f) => $f->arrondissement->libelle.$f->nom);
         }
 
         return response()->json([
@@ -65,7 +71,7 @@ class AnnuaireController extends Controller
             'contacts' => $contacts->map(fn (Facilitateur $f) => [
                 'nom' => $f->nom,
                 'telephone' => $f->telephone,
-                'arrondissement' => $f->arrondissement,
+                'arrondissement' => $f->arrondissement->libelle,
             ])->values()->all(),
         ]);
     }

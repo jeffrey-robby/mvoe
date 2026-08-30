@@ -18,7 +18,7 @@ navigateur ne donne accès à quoi que ce soit.
 4. [Protocole de synchronisation](#protocole-de-synchronisation)
 5. [Superviseur](#superviseur)
 6. [Espace parent](#espace-parent)
-7. [Annuaire public](#annuaire-public)
+7. [Annuaire public](#annuaire-public) — et les langues du programme
 8. [Erreurs](#erreurs)
 9. [Ce que l'API ne fait pas](#ce-que-lapi-ne-fait-pas)
 
@@ -245,6 +245,38 @@ que le serveur a enregistré, et au facilitateur à revoir son propre écart.
 }
 ```
 
+### `GET /api/facilitateur/formation`
+
+Ses modules de formation, et où il en est dans chacun.
+
+**Un module non validé n'est jamais servi** : ni ici, ni à son adresse directe,
+ni dans le paquet hors ligne. `ModuleFormation::diffusables()` est le seul
+chemin par lequel un module atteint un facilitateur.
+
+```json
+{
+  "modules": [{
+    "code": "RN-01",
+    "titre": "Discipliner sans frapper : les trois gestes",
+    "type": "remise_a_niveau", "type_libelle": "Remise à niveau",
+    "objectif": "Reprendre les trois alternatives concrètes à la punition physique.",
+    "duree_minutes": 15, "sections": 3,
+    "sections_vues": [1], "avancement": 33,
+    "termine": false, "derniere_ouverture": "2026-08-19"
+  }]
+}
+```
+
+### `GET /api/facilitateur/formation/{code}`
+
+Un module et ses sections, texte compris. **404** si le module n'est pas validé.
+
+### `GET /api/facilitateur/activites`, `/foyers`, `/groupes-soutien`, `/signalements`
+
+Ce qu'il relit de son travail de terrain. Rien ne s'écrit par ces routes : tout
+passe par la file. `/signalements` porte **la suite donnée** par le superviseur
+— c'est ce qui décide s'il en fera un deuxième.
+
 ---
 
 ## Protocole de synchronisation
@@ -268,8 +300,8 @@ La remontée envoie des **événements horodatés et idempotents, jamais des ét
 | Champ | Règle |
 |---|---|
 | `uuid` | UUID généré **côté client, hors ligne**. Clé d'idempotence. Requis. |
-| `type` | `seance`, `presence`, `sequence_ouverte`, `fiche_fidelite`, `bilan_seance` |
-| `seance_uuid` | UUID de la séance de rattachement. `null` pour `type: seance`. |
+| `type` | `seance`, `presence`, `sequence_ouverte`, `fiche_fidelite`, `bilan_seance`, `inscription_parent`, `activite`, `groupe_soutien`, `foyer`, `visite`, `signalement`, `progression_formation` |
+| `seance_uuid` | UUID de la séance de rattachement. `null` pour `type: seance` et pour tout ce qui se passe hors séance. |
 | `emis_a` | Date ISO 8601 du geste, telle que l'appareil l'a vue. |
 | `charge` | Objet, dépend du type (ci-dessous). |
 
@@ -309,6 +341,69 @@ Aucune action délibérée de sa part : c'est une trace d'usage, pas une saisie.
 
 ```json
 { "commentaire": "Séance écourtée, la pluie sur la tôle couvrait les voix." }
+```
+
+---
+
+Les six types suivants ne se rattachent à **aucune séance** (`seance_uuid: null`) :
+ils décrivent le travail hors séance, qui se saisit lui aussi sans réseau.
+
+`inscription_parent` — le facilitateur crée le dossier ; le parent l'active
+ensuite avec le code remis en main propre. `code_acces` est tiré sur l'appareil
+et **remplacé au journal** : il n'existe en clair qu'à l'écran et sur le papier.
+
+```json
+{ "cohorte_id": 1, "code_parent": "EB2-21", "code_acces": "0709",
+  "langue": "bulu", "statut_matrimonial": "union",
+  "revenu_regularite": "irregulier", "telephone_partage": true }
+```
+
+`activite` — tout ce qu'il fait hors séance. `nb_hommes + nb_femmes` ne peut pas
+dépasser `nb_parents_touches` : un total incohérent est **refusé**, jamais
+corrigé. L'arrondissement vient du compte, jamais de la charge.
+
+```json
+{ "type": "causerie_educative", "date": "2026-08-29",
+  "lieu": "sous le manguier du marché", "duree_minutes": 60,
+  "nb_parents_touches": 35, "nb_hommes": 12, "nb_femmes": 23,
+  "nb_participants_handicap": 2 }
+```
+
+`groupe_soutien` — un GSP et ses membres, désignés par leur code parent.
+`derniere_reunion` naît vide : elle n'avance que par une activité `reunion_gsp`.
+
+`foyer` — un dossier **sans identité**. Aucun nom, aucune adresse, aucune
+position : le modèle n'a pas de colonne où les mettre.
+
+```json
+{ "localite": "quartier Nko'ovos", "nb_adultes": 2, "nb_enfants": 4,
+  "difficultes_fonctionnelles_foyer": ["audition"], "deja_suivi_programme": true }
+```
+
+`visite` — se rattache à un foyer par son UUID client. Les observations sont des
+**cases cochées**, jamais un récit : un champ libre finit par contenir un nom.
+
+```json
+{ "foyer_uuid": "3b8e…", "date": "2026-08-29",
+  "observations_structurees": ["espace_de_jeu", "routine_du_coucher"],
+  "suivi_prevu": true }
+```
+
+`signalement` — il **remonte**, il ne déclenche rien. Aucune identité, aucune
+notification : il entre dans la file du superviseur, qui juge.
+
+```json
+{ "type": "maltraitance", "gravite": "elevee" }
+```
+
+`progression_formation` — les sections lues d'un module. Elles **fusionnent** à
+la réception au lieu de se remplacer, et **rouvrir un module fait avancer la
+dernière activité du facilitateur** : c'est ainsi qu'il reste actif au registre.
+Un module non validé refuse la progression.
+
+```json
+{ "module_code": "RN-01", "sections_vues": [1, 2],
+  "ouverte_a": "2026-08-30T09:12:00+01:00" }
 ```
 
 #### Réponse — **202**
@@ -460,6 +555,56 @@ défaut à `ratio_max`. Baisser le plafond sous l'effectif inscrit ne supprime
 personne — c'est signalé par `effectif_au_dela_du_plafond`, pas corrigé dans le
 dos du superviseur.
 
+### `GET /api/superviseur/signalements`
+
+La file des signalements de sa portée, et leur suite.
+
+**Le système ne notifie jamais une autorité.** Il n'existe aucun canal de sortie
+dans ce contrôleur, et un test échoue si `Mail::`, `Notification::` ou
+`Http::post` y apparaissent. Une alerte automatique de maltraitance préviendrait
+avant que quiconque ait vérifié — et parfois elle préviendrait l'agresseur.
+
+Aucune ligne ne porte l'identité d'un enfant, d'un parent ou d'un foyer : un
+type, une gravité, un arrondissement, et le facilitateur avec qui en parler.
+
+```json
+{
+  "synthese": { "total": 6, "a_traiter": 2, "graves_non_traites": 1,
+                "delai_moyen_traitement_jours": 9.5 },
+  "signalements": [{
+    "id": 7, "type": "maltraitance", "type_libelle": "Maltraitance",
+    "gravite": "elevee", "statut": "soumis", "statut_libelle": "À traiter",
+    "ouvert": true, "arrondissement": "Ebolowa II",
+    "facilitateur": "Ndzana Étienne",
+    "soumis_le": "2026-08-21", "jours_attente": 9,
+    "traite_par": null, "date_traitement": null, "suite_donnee": null
+  }]
+}
+```
+
+### `PATCH /api/superviseur/signalements/{signalement}`
+
+Traiter un signalement. `suite_donnee` est **obligatoire** dès qu'on oriente ou
+qu'on clôt : c'est ce que le facilitateur lira, et la seule raison pour laquelle
+il en fera un deuxième.
+
+```json
+{ "statut": "oriente", "suite_donnee": "Transmis au centre social." }
+```
+
+La réponse porte `"aucune_notification_envoyee": true` — dit explicitement,
+parce que c'est une décision d'architecture et non un oubli.
+
+**403** si le signalement n'est pas dans la portée du compte : un identifiant
+d'URL n'est pas une autorisation.
+
+### `GET /api/superviseur/tableau-de-bord`
+
+Le tableau de bord unique, aux cinq portées. Sans paramètre, celui du compte ;
+avec `?niveau=departement&entite=3`, celui d'une entité **contenue** dans sa
+portée. La vérification compare deux listes d'arrondissements — elle ne raisonne
+sur aucune hiérarchie.
+
 ---
 
 ## Espace parent
@@ -468,9 +613,24 @@ Ability `parent`. Espace **secondaire et optionnel** : la majorité des parents
 du programme n'y accédera jamais et sera servie par la séance, le binôme et la
 radio.
 
-Le paramètre `langue` (`fr`, `en`, `bulu`) est accepté partout ; à défaut, la
-langue préférée du parent s'applique. Quand la langue demandée n'existe pas, la
-réponse **le dit** (`langue_servie`) au lieu de le masquer.
+Le paramètre `langue` porte un **code de la table `langues`**, plus jamais une
+valeur d'enum : `GET /api/langues` en donne la liste, et elle est publique
+— le parent choisit sa langue avant de se connecter.
+
+À défaut de paramètre, la langue enregistrée du parent s'applique : c'est un
+attribut de la personne, pas de sa région.
+
+Trois champs disent la vérité sur ce qui est servi :
+
+| Champ | Ce qu'il dit |
+|---|---|
+| `langue_demandee` | ce qui a été demandé, code et nom |
+| `langue_servie` | ce qui a réellement été servi |
+| `langue_de_repli` | `true` quand les deux diffèrent |
+| `langues_disponibles` | **les seules langues où ce contenu existe** |
+
+L'interface ne propose que `langues_disponibles` quand un contenu est ouvert :
+proposer une langue non chargée, c'est promettre un contenu qui n'existe pas.
 
 ### `GET /api/parent/modules`
 
@@ -619,6 +779,24 @@ couvre pas encore, jamais à profiler quelqu'un.
 inconnu obtient quelque chose, et c'est voulu : quelqu'un qui a besoin d'un
 contact humain ne doit pas d'abord se connecter.
 
+### `GET /api/langues`
+
+Les langues actives du programme, avec leur **endonyme** — le nom de la langue
+dans cette langue. Publique, et il le faut : le parent choisit sa langue avant
+de se connecter, et on ne peut pas lui demander de lire « choisissez votre
+langue » dans une langue qu'il n'a pas encore choisie.
+
+```json
+{ "langues": [
+  { "code": "fr", "libelle": "Français", "nom": "Français" },
+  { "code": "bulu", "libelle": "Bulu", "nom": "Bulu" },
+  { "code": "en", "libelle": "Anglais", "nom": "English" }
+] }
+```
+
+Une langue désactivée disparaît de cette liste **sans que ses contenus soient
+perdus** : on cesse de la proposer, on ne supprime rien.
+
 ### `GET /api/arrondissements`
 
 ### `GET /api/annuaire?arrondissement=Ebolowa+II`
@@ -679,5 +857,14 @@ Ces absences sont des décisions de conception. Ne les comblez pas.
 - **Aucun nom de parent ni d'enfant**, nulle part, dans aucune réponse. Les
   seules personnes nommées sont les facilitateurs, qui sont des agents publics.
 - **Aucune date de naissance d'enfant** : une tranche d'âge suffit.
-- **Aucun tableau de bord temps réel.** Le livrable du superviseur est un
-  document trimestriel.
+- **Aucune notification, même interne.** Un signalement entre dans une file
+  qu'un humain consulte ; rien ne part vers personne, et
+  `SignalementController` n'a aucun canal de sortie.
+- **Aucun contenu non validé diffusé.** Un module de formation en brouillon ou
+  en attente n'existe ni dans l'API, ni dans le paquet hors ligne.
+- **Aucune langue écrite dans le code.** Elles vivent en base ; l'interface ne
+  propose que celles réellement chargées pour le contenu ouvert.
+
+Le tableau de bord, lui, a rejoint l'API depuis le nouveau brief : un seul, aux
+cinq portées. Le rapport trimestriel reste un DOCUMENT à côté — les deux ne se
+remplacent pas, l'un se lit tous les jours, l'autre se signe et se transmet.

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\ParentEspace;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Enums\Modalite;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
@@ -21,6 +21,8 @@ use Illuminate\Validation\Rule;
  */
 class CatalogueController extends Controller
 {
+    use ResoutLaLangue;
+
     public function modules(Request $request): JsonResponse
     {
         $modules = Module::ordonnes()->withCount('unites')->get();
@@ -41,19 +43,47 @@ class CatalogueController extends Controller
 
     public function unites(Request $request, Module $module): JsonResponse
     {
-        $langue = $this->langue($request);
+        $langue = $this->langueDemandee($request);
+        $repli = Langue::parDefaut();
 
-        $unites = $module->unites()->with('realisations', 'sequence')->get();
+        $unites = $module->unites()->with('realisations.langue', 'sequence')->get();
 
         return response()->json([
             'module' => ['id' => $module->id, 'numero' => $module->numero, 'titre' => $module->titre],
-            'unites' => $unites->map(fn (UniteDigitale $u) => [
-                'id' => $u->id,
-                'titre' => $u->realisation($langue, Modalite::Audio)?->titre
-                    ?? $u->realisation($langue, Modalite::TextePicto)?->titre,
-                'sequence' => ['ordre' => $u->sequence->ordre, 'titre' => $u->sequence->titre],
-                'audio_disponible' => (bool) $u->realisation($langue, Modalite::Audio)?->aUnAudio(),
-            ])->all(),
+            'langue' => $this->langueRendue($langue),
+
+            /*
+            | Les langues dans lesquelles CE module existe vraiment.
+            |
+            | Le selecteur de l'ecran ne propose que celles-ci. Proposer une
+            | langue qui n'est pas chargee, c'est promettre un contenu qui
+            | n'existe pas, et faire porter au parent la deception d'un
+            | catalogue incomplet.
+            */
+            'langues_disponibles' => $unites
+                ->flatMap(fn (UniteDigitale $u) => $u->languesDisponibles())
+                ->unique('id')
+                ->sortBy('ordre')
+                ->map(fn (Langue $l) => $this->langueRendue($l))
+                ->values()
+                ->all(),
+
+            'unites' => $unites->map(function (UniteDigitale $u) use ($langue, $repli) {
+                $servie = $u->realisation($langue, Modalite::Audio)
+                    ?? $u->realisation($langue, Modalite::TextePicto)
+                    ?? $u->realisation($repli, Modalite::Audio)
+                    ?? $u->realisation($repli, Modalite::TextePicto);
+
+                return [
+                    'id' => $u->id,
+                    'titre' => $servie?->titre,
+                    'sequence' => ['ordre' => $u->sequence->ordre, 'titre' => $u->sequence->titre],
+                    'audio_disponible' => (bool) $u->realisation($langue, Modalite::Audio)?->aUnAudio(),
+                    // Dit, jamais masque : le parent sait dans quelle langue il
+                    // s'apprete a ecouter.
+                    'langue_servie' => $this->langueRendue($servie?->langue),
+                ];
+            })->all(),
         ]);
     }
 
@@ -64,28 +94,37 @@ class CatalogueController extends Controller
     public function unite(Request $request, UniteDigitale $unite): JsonResponse
     {
         $donnees = $request->validate([
-            'langue' => ['nullable', Rule::enum(Langue::class)],
+            'langue' => ['nullable', 'string'],
             'modalite' => ['nullable', Rule::enum(Modalite::class)],
         ]);
 
-        $langue = $this->langue($request);
+        $langue = $this->langueDemandee($request);
         $modalite = Modalite::tryFrom($donnees['modalite'] ?? '') ?? Modalite::Audio;
 
-        $unite->load('realisations', 'module', 'sequence');
-        $realisation = $unite->realisation($langue, $modalite);
+        $unite->load('realisations.langue', 'module', 'sequence');
+
+        // Repli sur la langue par defaut quand la langue demandee n'est pas
+        // chargee sur cette unite. Le repli est TOUJOURS annonce.
+        $realisation = $unite->realisation($langue, $modalite)
+            ?? $unite->realisation(Langue::parDefaut(), $modalite);
 
         return response()->json([
             'id' => $unite->id,
             'message_cle' => $unite->message_cle,
             'reference' => $unite->reference(),
-            'langue_demandee' => $langue->value,
-            // Repli sur le français quand la langue demandée n'existe pas
-            // encore : on le dit, on ne le masque pas.
-            'langue_servie' => $realisation?->langue->value,
+            'langue_demandee' => $this->langueRendue($langue),
+            'langue_servie' => $this->langueRendue($realisation?->langue),
+            // L'ecran s'en sert pour dire « disponible en francais seulement »
+            // plutot que de faire croire a une traduction qui n'existe pas.
+            'langue_de_repli' => $realisation !== null
+                && $realisation->langue_id !== $langue->id,
+            'langues_disponibles' => $unite->languesDisponibles()
+                ->map(fn (Langue $l) => $this->langueRendue($l))
+                ->all(),
             'modalite' => $modalite->value,
             'realisation' => $realisation ? $this->realisation($realisation) : null,
             'modalites_disponibles' => $unite->realisations
-                ->where('langue', $langue)
+                ->where('langue_id', $realisation?->langue_id)
                 ->pluck('modalite')
                 ->map(fn (Modalite $m) => $m->value)
                 ->values()
@@ -104,9 +143,4 @@ class CatalogueController extends Controller
         ];
     }
 
-    private function langue(Request $request): Langue
-    {
-        return Langue::tryFrom((string) $request->query('langue'))
-            ?? $request->user()->langue_pref;
-    }
 }

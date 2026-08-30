@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\Langue;
+use App\Models\Langue;
 use App\Models\SituationFrequente;
 use App\Services\AppariementCorpus;
 use Illuminate\Console\Command;
@@ -59,7 +59,8 @@ class EssayerAssistant extends Command
 
     private function lesDouzeSituations(AppariementCorpus $assistant): int
     {
-        $situations = SituationFrequente::where('langue', Langue::Fr)->ordonnees()->get();
+        $situations = SituationFrequente::where('langue_id', Langue::parDefaut()->id)
+            ->ordonnees()->get();
 
         $lignes = [];
         $refusAttendusTenus = true;
