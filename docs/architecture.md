@@ -207,6 +207,8 @@ affichés sur `/design` sont exacts.
 | Signalements | 8, dont **2 non traités** |
 | Modules de formation | 4, dont **1 non validé** qui ne doit apparaître nulle part |
 | Progressions | 1 module terminé, 1 commencé à 33 %, 1 jamais ouvert |
+| Campagnes | 2, l'une à mi-cascade, l'autre que personne n'a ouverte |
+| Diffusions | 536 sur six mois, dont 8 émissions radio (7 attestées) |
 
 La cohorte complète est « Ebolowa II — groupe du mardi » (`CohorteSeeder`) :
 langues, enfants par tranche d'âge, binômes, trois séances dont une portant un
@@ -302,6 +304,110 @@ le facilitateur saisit un repère (« la voisine du dispensaire ») qui vit sous
 sa propre clé dans IndexedDB, hors de la file d'envoi, et est purgé en fin de
 cycle. Aucune fonction de `magasin.js` ne le recopie dans un événement, et il ne
 faut jamais en écrire une.
+
+## Campagnes, canaux, bibliothèque
+
+### La cascade est un enregistrement, pas une simulation
+
+Déclencher une campagne crée **toutes** les affectations d'un coup, aux quatre
+niveaux : région, département, arrondissement, facilitateur. Il n'y a ni file
+d'attente, ni propagation asynchrone.
+
+C'est un choix, et le brief l'impose : dans la vraie vie, la cascade
+administrative n'est pas un processus, c'est un fait. Le ministère décide, et
+tous les échelons sont concernés au même instant. Ce qui avance dans le temps,
+c'est la **prise de connaissance** de chaque échelon — un geste manuel, qui le
+reste : cocher automatiquement à l'ouverture d'un écran ferait passer une
+consultation pour une décision.
+
+L'écran affiche donc `9/29 arrondissements`, avec la phrase qui va avec : *ce
+n'est pas un taux d'exécution du programme, c'est le nombre de gens qui savent
+qu'elle existe.* Confondre les deux ferait croire qu'une campagne « à 80 % » a
+touché 80 % des parents.
+
+### Une contradiction du brief, et comment elle est tranchée
+
+La section 7 interdit « aucun message sortant vers un parent ». La section 2
+demande un `SmsDriver` avec un `send()`. Les deux tiennent à une condition, qui
+est celle retenue ici :
+
+> **Aucun message ne peut atteindre un parent identifié.** La table `parents` n'a
+> pas de numéro de téléphone — seulement `telephone_partage`, un booléen. Il n'y
+> a donc nulle part où lire à qui envoyer.
+
+Ce qu'un canal vise est une **cible collective** écrite en toutes lettres
+(« Parents inscrits, Sud », « Menu USSD — *880# »), jamais une personne. Un
+parent vient au système ; le système ne va jamais vers lui nommément.
+
+C'est aussi pourquoi les pilotes restent factices ici : brancher un opérateur
+supposerait d'abord de décider si le programme collecte des numéros, et c'est
+une décision qui n'appartient pas à l'équipe technique.
+
+### Les canaux : une abstraction, quatre pilotes
+
+`App\Canaux\PiloteDeCanal` a deux gestes : `envoyer()` et `statistiques()`.
+Tout le reste — API de l'opérateur, format des numéros, quotas — appartient au
+pilote et ne remonte jamais. **Brancher un opérateur réel consiste à remplacer
+une ligne du registre `Canaux::PILOTES`.** Si cette interface devait changer
+pour accueillir un opérateur, c'est que l'abstraction serait fausse.
+
+Les quatre pilotes sont **factices**, et l'API le dit (`pilotes_factices: true`,
+`factice: true` par canal). Un prototype qui laisserait croire que des SMS
+partent vraiment mentirait à son jury.
+
+Chaque canal compte ce qui lui est propre : messages remis pour le SMS,
+**abandons en cours de menu** pour l'USSD — une session ouverte ne dit rien, une
+session abandonnée au troisième écran dit que le troisième écran est mauvais.
+
+### La radio ne fabrique aucune audience
+
+Une station qui annonce « deux millions d'auditeurs » multiplie une couverture
+théorique par une population : elle n'a compté personne. Reprendre ce chiffre
+reviendrait à mentir avec les mots de quelqu'un d'autre.
+
+Ce qui est enregistré : les diffusions **attestées** — quelqu'un a signé que
+l'émission est passée. Sans attestation, une diffusion déclarée n'est qu'une
+intention.
+
+Ce qui est mesuré : le **surcroît d'appels vocaux et de sessions USSD dans les
+48 heures qui suivent**, en moyenne horaire.
+
+```
+7,88 appels/heure après l'émission   contre   2,41 le reste du temps
+                       → +226,5 %, sur 7 diffusions attestées
+```
+
+Trois précautions dans le calcul, et elles comptent autant que le résultat :
+
+1. On compare des **moyennes horaires**, pas des totaux : les fenêtres et les
+   jours ordinaires ne durent pas le même temps, et comparer des totaux ferait
+   passer une différence de durée pour un effet.
+2. Le **SMS est exclu** de la mesure : il est poussé, pas appelé. Le mélanger
+   aux canaux entrants fausserait tout.
+3. Quand il n'y a pas de quoi mesurer, l'API rend `mesurable: false` **avec sa
+   raison** — « pas mesurable » et « aucun effet » ne veulent pas dire la même
+   chose.
+
+Et la limite est rendue **avec** le chiffre, pas dans une annexe : la mesure ne
+capte que ceux qui ont un téléphone et qui rappellent, donc elle sous-estime
+l'effet. Ce qui vaut mieux que l'inverse.
+
+### La bibliothèque et la file de validation
+
+Réservées au national. Une délégation qui validerait ses propres contenus
+produirait dix curriculums différents, et le programme cesserait d'être
+national.
+
+Deux choses s'y voient qu'on ne voit nulle part ailleurs :
+
+- **La couverture par langue.** Une unité chargée en français et pas en bulu
+  n'atteint pas les locuteurs bulu, quel que soit le nombre total de
+  réalisations. C'est le seul chiffre qui dise où porter l'effort.
+- **Une langue enregistrée sans réalisation** apparaît à zéro, en couleur
+  d'alerte : elle est une promesse, pas un service.
+
+Retirer une langue la sort de l'interface **sans rien supprimer**, et l'API le
+dit en rendant `realisations_conservees`.
 
 ## Deux catalogues, pas un
 
@@ -578,26 +684,47 @@ dans la barre latérale et masque le lien « Enregistrer » aux niveaux qui n'en
 ont pas le droit. Ce masquage est un confort d'interface : l'autorisation réelle
 est dans `EnregistrementFacilitateur`, côté serveur.
 
-## ⚠ Refonte en cours
+## Ce qui reste à faire
 
-Le brief `CLAUDE.md` remet encore en cause :
+Les neuf étapes du brief sont faites. Ce qui suit est ce que je n'ai pas fait,
+et pourquoi.
 
-- **`unites_digitales` / `realisations`** → `contenus` / `realisations` avec
-  `statut_validation` et modalité `video`.
+**`unites_digitales` n'a pas été renommée en `contenus`.** Le brief décrit une
+table unique portant les quatre types de contenu. La refonte coûterait cher —
+elle touche le paquet hors ligne, l'assistant, l'espace parent — pour un gain
+qui ne se voit nulle part à l'écran. Ce que la table `contenus` apportait
+vraiment, `statut_validation`, existe désormais sur `realisations` et sur
+`modules_formation`, et la règle « un contenu non validé ne peut pas être
+diffusé » est appliquée aux deux.
 
-Un refactor des traductions de `questions` était en cours au moment de la
-bascule (tables `questions_traduites` et `options_traduites` créées, migrations
-modifiées, **base non remigrée, seeder non mis à jour**). Il reste à reprendre
-sur la table `langues`, maintenant qu'elle existe : les questions de la semaine
-sont le seul contenu parent qui ne porte pas encore de langue.
+**La modalité `video` n'existe pas.** Aucune vidéo n'est chargée, et une
+modalité vide dans un sélecteur serait une promesse.
+
+**Les questions de la semaine ne portent pas de langue.** C'est le seul contenu
+parent dans ce cas. Le refactor entamé sous l'ancien brief (`questions_traduites`,
+`options_traduites`) est à reprendre sur la table `langues`.
+
+**L'interface n'est pas traduite en anglais.** Le brief demande de « préparer la
+structure de traduction » ; les libellés sont encore écrits en dur dans les
+vues. C'est un travail mécanique et volumineux, sans risque, qui ne change rien
+à ce que le jury doit voir fonctionner.
+
+**Aucun écran ne crée un module de formation ni une réalisation.** Le ministère
+les charge par seeder ; la bibliothèque les VALIDE mais ne les rédige pas.
+
+**Le kit ne crée pas de groupe de soutien.** Les GSP existent par l'API et le
+seeder, et le tableau de bord suit leur continuité — mais le facilitateur n'a
+pas d'écran pour en constituer un.
 
 **Fait.** La hiérarchie `regions` / `departements` / `arrondissements` et la
 portée à cinq niveaux, l'enregistrement d'un facilitateur par son superviseur,
 la refonte visuelle sur le template, le tableau de bord unique à cinq portées
 avec sa descente, l'inscription d'un parent par son facilitateur hors ligne, et
 le travail de terrain — activités, visites à domicile, groupes de soutien,
-signalements —, les langues devenues des données, et les modules de formation
-du facilitateur.
+signalements —, les langues devenues des données, les modules de formation du
+facilitateur, et les campagnes, canaux et bibliothèque du ministère.
+
+**Les neuf étapes du brief sont faites.**
 
 Ce qui n'est pas remis en cause et doit survivre : le protocole de
 synchronisation, l'écart déclaré/observé, la couche hors ligne, l'assistant à

@@ -63,6 +63,11 @@ Route::view('/superviseur/connexion', 'superviseur.connexion')->name('superviseu
 Route::view('/superviseur/enregistrer', 'superviseur.enregistrer')->name('superviseur.enregistrer');
 Route::view('/superviseur/signalements', 'superviseur.signalements')
     ->name('superviseur.signalements');
+Route::view('/superviseur/campagnes', 'superviseur.campagnes')
+    ->name('superviseur.campagnes');
+Route::view('/superviseur/bibliotheque', 'superviseur.bibliotheque')
+    ->name('superviseur.bibliotheque');
+Route::view('/superviseur/canaux', 'superviseur.canaux')->name('superviseur.canaux');
 Route::view('/superviseur/rapport', 'superviseur.rapport')->name('superviseur.rapport');
 Route::view('/superviseur/parametres', 'superviseur.parametres')->name('superviseur.parametres');
 

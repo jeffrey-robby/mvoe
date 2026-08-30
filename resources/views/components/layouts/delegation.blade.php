@@ -29,6 +29,12 @@
             ['/superviseur/enregistrer', 'Enregistrer', 'M12 5v14M5 12h14', 'peutEnregistrer'],
             ['/superviseur/signalements', 'Signalements',
                 'M12 4l9 16H3zM12 10v4M12 17h.01', null],
+            ['/superviseur/campagnes', 'Campagnes',
+                'M4 6h16M4 12h10M4 18h6M18 11l3 3-3 3', null],
+            ['/superviseur/bibliotheque', 'Bibliothèque',
+                'M5 4h4v16H5zM11 4h4v16h-4zM17 6l3 14', 'estNational'],
+            ['/superviseur/canaux', 'Canaux',
+                'M12 3v18M5 8a10 10 0 0 1 14 0M8 12a6 6 0 0 1 8 0', 'estNational'],
             ['/superviseur/rapport', 'Rapport', 'M8 4h9l3 3v13H8zM8 9h8M8 13h8M8 17h5', null],
             ['/superviseur/parametres', 'Paramètres', 'M4 8h16M4 16h16M9 5v6M15 13v6', null],
         ];

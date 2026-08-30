@@ -110,6 +110,30 @@ export const api = {
 
     signalements: (jeton) => appeler('superviseur/signalements', { jeton }),
 
+    /* --- Ministère -------------------------------------------------------- */
+
+    bibliotheque: (jeton) => appeler('superviseur/bibliotheque', { jeton }),
+
+    validerModule: (jeton, code, statut) =>
+        appeler(`superviseur/bibliotheque/modules/${code}`, {
+            methode: 'PATCH', jeton, corps: { statut_validation: statut },
+        }),
+
+    enregistrerLangue: (jeton, donnees, id = null) =>
+        appeler(id ? `superviseur/bibliotheque/langues/${id}` : 'superviseur/bibliotheque/langues', {
+            methode: id ? 'PATCH' : 'POST', jeton, corps: donnees,
+        }),
+
+    campagnes: (jeton) => appeler('superviseur/campagnes', { jeton }),
+
+    creerCampagne: (jeton, corps) =>
+        appeler('superviseur/campagnes', { methode: 'POST', jeton, corps }),
+
+    accuserCampagne: (jeton, id) =>
+        appeler(`superviseur/campagnes/${id}/reception`, { methode: 'POST', jeton }),
+
+    canaux: (jeton) => appeler('superviseur/canaux', { jeton }),
+
     traiterSignalement: (jeton, id, donnees) =>
         appeler(`superviseur/signalements/${id}`, { methode: 'PATCH', jeton, corps: donnees }),
 

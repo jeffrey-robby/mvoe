@@ -10,8 +10,8 @@ import {
     entreeParent, feuilletonParent, questionsSemaine,
 } from './parent.js';
 import {
-    connexionDelegation, enregistrerFacilitateur, enteteDelegation, parametres, rapport,
-    registre, signalements, tableauDeBord,
+    bibliotheque, campagnes, canaux, connexionDelegation, enregistrerFacilitateur,
+    enteteDelegation, parametres, rapport, registre, signalements, tableauDeBord,
 } from './superviseur.js';
 import { demarrerSynchronisation } from './synchronisation.js';
 
@@ -43,6 +43,9 @@ Alpine.data('connexionDelegation', connexionDelegation);
 Alpine.data('tableauDeBord', tableauDeBord);
 Alpine.data('registre', registre);
 Alpine.data('signalements', signalements);
+Alpine.data('bibliotheque', bibliotheque);
+Alpine.data('campagnes', campagnes);
+Alpine.data('canaux', canaux);
 Alpine.data('enregistrerFacilitateur', enregistrerFacilitateur);
 Alpine.data('rapport', rapport);
 Alpine.data('parametres', parametres);

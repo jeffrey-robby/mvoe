@@ -125,6 +125,17 @@ export function enteteDelegation() {
         get peutEnregistrer() {
             return this.niveau === 'arrondissement';
         },
+
+        /**
+         * La bibliothèque et les canaux sont des prérogatives du ministère.
+         *
+         * Une délégation qui validerait ses propres contenus produirait dix
+         * curriculums différents, et le programme cesserait d'être national. Le
+         * serveur le refuse ; la navigation ne le propose pas.
+         */
+        get estNational() {
+            return this.niveau === 'national';
+        },
     };
 }
 
@@ -308,6 +319,296 @@ export function signalements() {
             } finally {
                 this.occupe = false;
             }
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * La bibliotheque de contenus et la file de validation.
+ *
+ * C'est l'autre moitie de la regle « un contenu non valide ne peut pas etre
+ * diffuse » : il faut bien un endroit ou quelqu'un valide, sans quoi la regle
+ * bloquerait tout et serait contournee dans les six mois.
+ */
+export function bibliotheque() {
+    return {
+        langues: [],
+        contenusParents: null,
+        contenusFacilitateurs: null,
+        file: [],
+        chargement: true,
+        occupe: false,
+        erreur: null,
+
+        // La creation d'une langue.
+        nouvelleLangue: { code: '', libelle: '', endonyme: '' },
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            await this.charger();
+        },
+
+        async charger() {
+            this.chargement = true;
+            this.erreur = null;
+
+            try {
+                const d = await api.bibliotheque(sessionDelegation.jeton());
+
+                this.langues = d.langues;
+                this.contenusParents = d.contenus_parents;
+                this.contenusFacilitateurs = d.contenus_facilitateurs;
+                this.file = d.file_de_validation;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        async valider(code, statut) {
+            if (this.occupe) return;
+
+            this.occupe = true;
+
+            try {
+                await api.validerModule(sessionDelegation.jeton(), code, statut);
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        async basculerLangue(langue) {
+            if (this.occupe) return;
+
+            this.occupe = true;
+
+            try {
+                await api.enregistrerLangue(
+                    sessionDelegation.jeton(), { actif: !langue.actif }, langue.id,
+                );
+
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        get peutAjouterUneLangue() {
+            return this.nouvelleLangue.code.trim() !== ''
+                && this.nouvelleLangue.libelle.trim() !== '';
+        },
+
+        async ajouterUneLangue() {
+            if (!this.peutAjouterUneLangue || this.occupe) return;
+
+            this.occupe = true;
+
+            try {
+                await api.enregistrerLangue(sessionDelegation.jeton(), {
+                    code: this.nouvelleLangue.code.trim(),
+                    libelle: this.nouvelleLangue.libelle.trim(),
+                    endonyme: this.nouvelleLangue.endonyme.trim() || null,
+                });
+
+                this.nouvelleLangue = { code: '', libelle: '', endonyme: '' };
+
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Les campagnes.
+ *
+ * Le ministere en cree ; les delegations accusent reception. La cascade est
+ * enregistree d'un coup au declenchement — ce qui avance dans le temps, c'est
+ * la prise de connaissance de chaque echelon, pas la campagne.
+ */
+export function campagnes() {
+    return {
+        campagnes: [],
+        peutCreer: false,
+        modules: [],
+        langues: [],
+        regions: [],
+        chargement: true,
+        occupe: false,
+        erreur: null,
+
+        formulaireOuvert: false,
+        titre: '',
+        objet: '',
+        moduleIds: [],
+        langueIds: [],
+        regionIds: [],
+        dateDebut: new Date().toISOString().slice(0, 10),
+        dateFin: '',
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            await this.charger();
+        },
+
+        async charger() {
+            this.chargement = true;
+            this.erreur = null;
+
+            try {
+                const d = await api.campagnes(sessionDelegation.jeton());
+
+                this.campagnes = d.campagnes;
+                this.peutCreer = d.peut_creer;
+                this.modules = d.modules_disponibles;
+                this.langues = d.langues_disponibles;
+                this.regions = d.regions;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        basculer(liste, valeur) {
+            const index = this[liste].indexOf(valeur);
+
+            if (index === -1) this[liste].push(valeur);
+            else this[liste].splice(index, 1);
+        },
+
+        get peutValider() {
+            return this.titre.trim() !== ''
+                && this.moduleIds.length > 0
+                && this.langueIds.length > 0
+                && this.regionIds.length > 0
+                && this.dateFin !== '';
+        },
+
+        async creer() {
+            if (!this.peutValider || this.occupe) return;
+
+            this.occupe = true;
+            this.erreur = null;
+
+            try {
+                await api.creerCampagne(sessionDelegation.jeton(), {
+                    titre: this.titre.trim(),
+                    objet: this.objet.trim() || null,
+                    module_ids: this.moduleIds,
+                    langue_ids: this.langueIds,
+                    region_ids: this.regionIds,
+                    date_debut: this.dateDebut,
+                    date_fin: this.dateFin,
+                });
+
+                this.fermerLeFormulaire();
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        fermerLeFormulaire() {
+            this.formulaireOuvert = false;
+            this.titre = '';
+            this.objet = '';
+            this.moduleIds = [];
+            this.langueIds = [];
+            this.regionIds = [];
+            this.dateFin = '';
+        },
+
+        async accuser(campagne) {
+            if (this.occupe) return;
+
+            this.occupe = true;
+
+            try {
+                await api.accuserCampagne(sessionDelegation.jeton(), campagne.id);
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        /** Le nombre d'echelons ayant pris connaissance, tous niveaux confondus. */
+        recues(campagne) {
+            return campagne.avancement.reduce((n, l) => n + l.recues, 0);
+        },
+
+        affectees(campagne) {
+            return campagne.avancement.reduce((n, l) => n + l.affectees, 0);
+        },
+    };
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Les canaux de diffusion.
+ *
+ * Les pilotes sont FACTICES, et l'ecran le dit en toutes lettres. Pour la
+ * radio, aucune audience n'est affichee : on montre le surcroit d'appels et de
+ * sessions dans les 48 heures suivant une diffusion attestee.
+ */
+export function canaux() {
+    return {
+        canaux: [],
+        dernieres: [],
+        periode: null,
+        factices: true,
+        chargement: true,
+        erreur: null,
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            try {
+                const d = await api.canaux(sessionDelegation.jeton());
+
+                this.canaux = d.canaux;
+                this.dernieres = d.dernieres;
+                this.periode = d.periode;
+                this.factices = d.pilotes_factices;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        get radio() {
+            return this.canaux.find((c) => c.canal === 'radio') ?? null;
+        },
+
+        get autres() {
+            return this.canaux.filter((c) => c.canal !== 'radio');
+        },
+
+        nombre(valeur) {
+            return valeur === null || valeur === undefined
+                ? '\u2014'
+                : String(valeur).replace('.', ',');
         },
     };
 }

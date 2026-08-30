@@ -23,7 +23,7 @@
 |
 */
 
-const VERSION = '7ddea94088bf';
+const VERSION = 'ae1a5a529e05';
 
 const CACHES = {
     coquille: `mvoe-coquille-${VERSION}`,
@@ -33,8 +33,8 @@ const CACHES = {
 
 /** Injecté au build depuis le manifeste de Vite. */
 const RESSOURCES = [
-    "/build/assets/app-CIQ0grey.js",
-    "/build/assets/app-ChORF91_.css",
+    "/build/assets/app-B91F5qjQ.js",
+    "/build/assets/app-WPlRx99C.css",
     "/build/assets/archivo-600-normal-3BBy0ZsW.woff2",
     "/build/assets/archivo-600-normal-DwYieO8P.woff",
     "/build/assets/archivo-700-normal-D9cHMWGj.woff2",

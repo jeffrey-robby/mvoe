@@ -36,6 +36,10 @@ class DatabaseSeeder extends Seeder
             // parents. Après les facilitateurs, dont il enregistre la
             // progression.
             FormationSeeder::class,
+
+            // Les campagnes et les canaux : ils s'appuient sur les modules
+            // validés, les langues et le découpage administratif.
+            CampagneEtCanauxSeeder::class,
             EspaceParentSeeder::class,
         ]);
 

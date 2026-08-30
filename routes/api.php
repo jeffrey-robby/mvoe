@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\ParentEspace\CatalogueController;
 use App\Http\Controllers\Api\ParentEspace\FeuilletonController;
 use App\Http\Controllers\Api\ParentEspace\QuestionController;
 use App\Http\Controllers\Api\LangueController;
+use App\Http\Controllers\Api\Minproff\BibliothequeController;
+use App\Http\Controllers\Api\Minproff\CampagneController;
+use App\Http\Controllers\Api\Minproff\CanalController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\Superviseur\CohorteController as CohorteSuperviseurController;
 use App\Http\Controllers\Api\Superviseur\EnregistrementFacilitateurController;
@@ -126,6 +129,25 @@ Route::middleware(['auth:sanctum', 'abilities:superviseur'])
         Route::get('signalements', [SignalementController::class, 'index']);
         Route::patch('signalements/{signalement}', [SignalementController::class, 'update']);
         Route::patch('cohortes/{cohorte}', [ParametreCohorteController::class, 'update']);
+
+        /*
+         * Le ministère. Ces routes vivent sous le préfixe `superviseur` parce
+         * qu'elles partagent son jeton — la chaîne administrative n'a qu'une
+         * seule porte d'entrée. C'est la PORTÉE du compte qui les autorise,
+         * pas une permission séparée : `niveau === 'national'`.
+         */
+        Route::get('bibliotheque', [BibliothequeController::class, 'index']);
+        Route::patch('bibliotheque/modules/{code}', [BibliothequeController::class, 'valider']);
+        Route::post('bibliotheque/langues', [BibliothequeController::class, 'langue']);
+        Route::patch('bibliotheque/langues/{id}', [BibliothequeController::class, 'langue']);
+
+        // Les campagnes se LISENT à tous les niveaux, ne se créent qu'au
+        // national, et s'accusent en réception à tous les autres.
+        Route::get('campagnes', [CampagneController::class, 'index']);
+        Route::post('campagnes', [CampagneController::class, 'store']);
+        Route::post('campagnes/{campagne}/reception', [CampagneController::class, 'accuser']);
+
+        Route::get('canaux', [CanalController::class, 'index']);
     });
 
 /*

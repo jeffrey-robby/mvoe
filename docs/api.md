@@ -16,7 +16,8 @@ navigateur ne donne accès à quoi que ce soit.
 2. [Ouvrir et fermer une session](#ouvrir-et-fermer-une-session)
 3. [Kit facilitateur](#kit-facilitateur)
 4. [Protocole de synchronisation](#protocole-de-synchronisation)
-5. [Superviseur](#superviseur)
+5. [Superviseur](#superviseur) — registre, rapport, signalements, tableau de
+   bord, et les écrans du ministère : campagnes, canaux, bibliothèque
 6. [Espace parent](#espace-parent)
 7. [Annuaire public](#annuaire-public) — et les langues du programme
 8. [Erreurs](#erreurs)
@@ -598,6 +599,88 @@ parce que c'est une décision d'architecture et non un oubli.
 **403** si le signalement n'est pas dans la portée du compte : un identifiant
 d'URL n'est pas une autorisation.
 
+### `GET /api/superviseur/campagnes`
+
+Les campagnes. Le national les voit toutes ; une délégation ne voit que celles
+dont une affectation touche l'un de ses arrondissements.
+
+`avancement` donne, niveau par niveau, combien d'échelons ont pris connaissance.
+**Ce n'est pas un taux d'exécution du programme** : confondre les deux ferait
+croire qu'une campagne « à 80 % » a touché 80 % des parents.
+
+```json
+{
+  "peut_creer": true,
+  "campagnes": [{
+    "titre": "Rentrée scolaire — discipline positive",
+    "regions": ["Sud"], "langues": ["Français", "Bulu"],
+    "avancement": [
+      { "niveau": "region", "affectees": 1, "recues": 1 },
+      { "niveau": "departement", "affectees": 4, "recues": 2 },
+      { "niveau": "arrondissement", "affectees": 29, "recues": 9 },
+      { "niveau": "facilitateur", "affectees": 50, "recues": 11 }
+    ]
+  }]
+}
+```
+
+### `POST /api/superviseur/campagnes`
+
+Déclenche une campagne. **National seulement.** Crée TOUTES les affectations
+d'un coup, aux quatre niveaux — il n'y a pas de propagation asynchrone.
+
+**422** si un module n'est pas validé : on ne lance pas une campagne sur un
+brouillon, et le contrôle est côté serveur, pas seulement dans l'écran.
+
+### `POST /api/superviseur/campagnes/{campagne}/reception`
+
+Un échelon prend connaissance. Geste manuel, et il le reste : cocher à
+l'ouverture d'un écran ferait passer une consultation pour une décision.
+**422** pour le national, qui déclenche les campagnes mais n'en reçoit pas.
+
+### `GET /api/superviseur/canaux`
+
+Les quatre canaux sur une période. `pilotes_factices: true` et `factice: true`
+par canal : rien ne part réellement, et l'API le dit.
+
+**Pour la radio, `audience` vaut toujours `null`.** À la place, `surcroit` donne
+le surplus d'appels vocaux et de sessions USSD dans les 48 heures suivant une
+diffusion attestée, en moyenne horaire — avec sa limite écrite à côté.
+
+```json
+{
+  "canal": "radio", "audience": null, "mesure": "surcroit_48h",
+  "surcroit": {
+    "mesurable": true, "fenetre_heures": 48, "diffusions_attestees": 7,
+    "par_heure_apres": 7.88, "par_heure_ordinaire": 2.41,
+    "surcroit_pourcent": 226.5,
+    "limite": "Ne compte que ceux qui ont un téléphone et qui rappellent…"
+  }
+}
+```
+
+Quand il n'y a pas de quoi mesurer, `mesurable: false` **avec sa raison** :
+« pas mesurable » et « aucun effet » ne veulent pas dire la même chose.
+
+### `GET /api/superviseur/bibliotheque`
+
+La bibliothèque, les langues et la file de validation. **National seulement** :
+une délégation qui validerait ses propres contenus produirait dix curriculums
+différents.
+
+`contenus_parents.couverture` dit, langue par langue, combien d'unités manquent.
+C'est le seul chiffre qui dise où porter l'effort.
+
+### `PATCH /api/superviseur/bibliotheque/modules/{code}`
+
+Valider un module, ou le renvoyer en brouillon — ce qui le retire immédiatement
+des kits au prochain paquet.
+
+### `POST|PATCH /api/superviseur/bibliotheque/langues[/{id}]`
+
+Enregistrer une langue, ou la retirer de l'interface. Retirer ne supprime rien :
+la réponse rend `realisations_conservees`.
+
 ### `GET /api/superviseur/tableau-de-bord`
 
 Le tableau de bord unique, aux cinq portées. Sans paramètre, celui du compte ;
@@ -846,7 +929,12 @@ Ces absences sont des décisions de conception. Ne les comblez pas.
 - **Aucun message sortant vers un parent.** Pas de notification, pas de rappel,
   pas de relance, aucun endpoint qui en émettrait. Le parent vient au système ;
   le système ne va jamais vers lui.
-- **Aucun canal SMS, USSD ou vocal.**
+- **Aucun canal réellement branché.** Les quatre pilotes sont factices et le
+  disent. Ce qui est réel, c'est l'abstraction : brancher un opérateur consiste
+  à remplacer une ligne du registre des pilotes.
+- **Aucune audience radio.** Une station qui annonce « deux millions
+  d'auditeurs » n'a compté personne. On mesure le surcroît d'appels à 48 h, avec
+  sa limite écrite à côté du chiffre.
 - **Aucun appel à un modèle de langage génératif.** L'assistant retrouve, il ne
   rédige pas.
 - **Aucune alerte automatique de maltraitance.** L'API affiche un contact
