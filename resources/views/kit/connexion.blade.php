@@ -146,7 +146,7 @@
                             </button>
                         </form>
 
-                      
+                        <x-mvoe.acces-espaces actuel="kit" />
                     </div>
                 </div>
             </div>

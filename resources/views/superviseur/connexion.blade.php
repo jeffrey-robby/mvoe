@@ -84,7 +84,7 @@
                             </button>
                         </form>
 
-                     
+                        <x-mvoe.acces-espaces actuel="superviseur" />
 
                     </div>
                 </div>

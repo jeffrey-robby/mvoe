@@ -186,6 +186,10 @@
                             </button>
                         </div>
                     </template>
+
+                    {{-- Les trois portes d'entrée du prototype. Hors des étapes :
+                         visibles quel que soit l'endroit où l'on se trouve. --}}
+                    <x-mvoe.acces-espaces actuel="parent" />
                 </div>
             </div>
         </div>
