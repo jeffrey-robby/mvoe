@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -17,6 +18,26 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->limiteursDeDebit();
+        $this->interdireViteEnDirect();
+    }
+
+    /**
+     * Un « npm run dev » lance par megarde sur le serveur depose
+     * `public/hot`. Tant que ce fichier existe, Laravel sert TOUT le CSS et
+     * le JS depuis 127.0.0.1:5174 — c'est-a-dire depuis la machine du
+     * VISITEUR, ou rien n'ecoute. Les pages s'affichent alors sans une seule
+     * regle de style, et rien dans les journaux ne le signale : le serveur
+     * repond 200.
+     *
+     * Hors du poste de developpement, on pointe donc le drapeau vers un
+     * chemin qui n'existera jamais. Le mode direct devient inatteignable, et
+     * le manifeste de build reste le seul chemin possible.
+     */
+    private function interdireViteEnDirect(): void
+    {
+        if (! $this->app->environment('local')) {
+            Vite::useHotFile(storage_path('framework/vite-en-direct-interdit'));
+        }
     }
 
     /**
