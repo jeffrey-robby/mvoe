@@ -29,7 +29,8 @@
                     section="Facilitateur"
                     note="Ce kit fonctionne sans réseau."
                     :reglages="null"
-                    :manifeste="true">
+                    :manifeste="true"
+                    :terrain="true">
 
     <x-slot:outils>
         {{-- L'état du réseau et la file en attente ne quittent jamais l'écran :

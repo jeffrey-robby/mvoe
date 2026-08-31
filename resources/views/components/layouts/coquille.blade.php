@@ -27,6 +27,11 @@
 
     // Ce qui rend l'application installable sur un téléphone.
     'manifeste' => false,
+
+    // Le systeme « terrain » : corps a 17 px et contour de focus epais, pour un
+    // ecran tenu d'une main en plein soleil. L'administration s'en passe : elle
+    // se lit assis, a la souris, sur un grand ecran.
+    'terrain' => false,
 ])
 
 <!DOCTYPE html>
@@ -57,7 +62,11 @@
 </head>
 
 <body x-data="main"
-      class="antialiased relative font-nunito text-sm font-normal overflow-x-hidden"
+      @class([
+          'antialiased relative font-nunito font-normal overflow-x-hidden',
+          'terrain' => $terrain,
+          'text-sm' => ! $terrain,
+      ])
       :class="[$store.app.sidebar ? 'toggle-sidebar' : '', $store.app.theme === 'dark' || $store.app.isDarkMode ? 'dark' : '', $store.app.menu, $store.app.layout, $store.app.rtlClass]">
 
     <div x-cloak class="fixed inset-0 bg-[black]/60 z-50 lg:hidden" :class="{ 'hidden': !$store.app.sidebar }"

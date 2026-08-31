@@ -18,8 +18,8 @@
 
         <h2 class="text-2xl font-bold dark:text-white-light">Les questions de la semaine</h2>
         <p class="text-white-dark mt-1">
-            Aucune réponse n'est bonne ou mauvaise. À chaque fois, le programme dit ce
-            qu'il propose et pourquoi.
+            Il n'y a rien à réussir ici. À chaque fois, le programme dit ce qu'il
+            propose, et pourquoi.
         </p>
     </div>
 

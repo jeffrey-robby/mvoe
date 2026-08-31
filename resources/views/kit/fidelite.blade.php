@@ -17,7 +17,7 @@
 
         <template x-if="seance && ! accessible">
             <div class="panel">
-                <h5 class="font-semibold text-lg dark:text-white-light">La fiche s'ouvre à la fin de la séance</h5>
+                <h5 class="font-semibold text-lg dark:text-white-light">La fiche s'ouvre à la fin de la séance.</h5>
                 <p class="text-white-dark mt-1">On ne raconte pas une séance pendant qu'on l'anime.</p>
                 <a class="btn btn-outline-primary mt-5 inline-flex"
                    x-bind:href="'/kit/seance?module=' + seance.module_id" href="#">Reprendre le déroulé</a>

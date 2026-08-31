@@ -121,11 +121,19 @@ class SessionApiTest extends ApiTestCase
             ->assertStatus(403);
     }
 
-    public function test_sans_jeton_rien_nest_accessible(): void
+    public function test_sans_jeton_rien_de_personnel_nest_accessible(): void
     {
         $this->getJson('/api/facilitateur/cohortes')->assertStatus(401);
-        $this->getJson('/api/parent/modules')->assertStatus(401);
         $this->getJson('/api/superviseur/facilitateurs')->assertStatus(401);
+
+        /*
+        | L'espace parent fait exception EN LECTURE : les contenus du programme
+        | sont produits par le ministere pour etre lus, et exiger un code
+        | reviendrait a les reserver aux parents deja inscrits — ceux qui en ont
+        | le moins besoin. Ce qui s'attache a une personne reste ferme.
+        */
+        $this->getJson('/api/parent/modules')->assertOk();
+        $this->postJson('/api/parent/questions/1/reponse', ['option_id' => 1])->assertStatus(401);
     }
 
     public function test_la_deconnexion_revoque_le_jeton(): void
@@ -141,7 +149,10 @@ class SessionApiTest extends ApiTestCase
         // chaque requête repart de zéro ; on reproduit ça ici.
         $this->app['auth']->forgetGuards();
 
-        $this->getJson('/api/parent/modules', $this->entete($jeton))->assertStatus(401);
+        // La sonde vise une route qui EXIGE un compte : les lectures de
+        // l'espace parent repondent desormais avec ou sans jeton.
+        $this->postJson('/api/parent/questions/1/reponse', ['option_id' => 1],
+            $this->entete($jeton))->assertStatus(401);
     }
 
 }

@@ -57,7 +57,8 @@
 
                             {{-- « À reprendre », pas « 37 % » : on ne mesure pas
                                  l'assiduité de quelqu'un. --}}
-                            <span class="badge bg-warning shadow-md shrink-0" x-show="commence(e)">
+                            <span class="shrink-0 rounded px-2 py-0.5 text-xs font-semibold bg-jaune-sourd text-noir"
+                                  x-show="commence(e)">
                                 À reprendre
                             </span>
                         </button>

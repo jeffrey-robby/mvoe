@@ -153,10 +153,27 @@ class EcransParentTest extends TestCase
     {
         $js = File::get(resource_path('js/parent.js'));
 
-        // Règle 3 : pas de « rester connecté ». Le téléphone est souvent
-        // partagé au sein du foyer.
-        $this->assertStringContainsString('sessionStorage.setItem', $js);
-        $this->assertStringNotContainsString('localStorage', $js);
+        /*
+        | Regle 3 : pas de « rester connecte ». Le telephone est souvent partage
+        | au sein du foyer.
+        |
+        | Ce qui ne doit JAMAIS survivre a l'onglet, c'est le jeton : il ouvre
+        | l'espace de quelqu'un. La langue choisie, elle, est une preference
+        | d'affichage — un visiteur sans compte qui devrait la re-choisir a
+        | chaque visite serait puni pour ne pas etre inscrit. Elle a donc le
+        | droit de persister, et elle seule.
+        */
+        $this->assertStringContainsString('sessionStorage.setItem(CLE', $js);
+
+        // La SEULE chose qui a le droit de persister est la langue. Ni le
+        // jeton, ni la position de lecture ne doivent toucher localStorage.
+        $this->assertDoesNotMatchRegularExpression(
+            '/localStorage\.setItem\(\s*(CLE|CLE_LECTURE)\s*[,)]/', $js,
+            "Le jeton et l'historique d'ecoute meurent avec l'onglet.");
+
+        $this->assertMatchesRegularExpression(
+            '/localStorage\.setItem\(\s*CLE_LANGUE/', $js,
+            'La langue choisie est la seule preference qui survit a la visite.');
     }
 
     public function test_lannuaire_reste_accessible_sans_compte(): void
@@ -164,9 +181,9 @@ class EcransParentTest extends TestCase
         $vue = File::get(resource_path('views/parent/facilitateur.blade.php'));
 
         // Quelqu'un qui a besoin d'un contact humain ne doit pas d'abord se
-        // connecter : l'écran n'exige aucune session.
-        $this->assertStringContainsString(':barre="false"', $vue);
+        // connecter : l'ecran n'exige aucune session, et l'API repond sans jeton.
         $this->assertStringNotContainsString('exigerUneSession', $vue);
+        $this->getJson('/api/annuaire?arrondissement=Ebolowa II')->assertOk();
 
         // On borne la découpe au corps d'annuaireParent : les composants
         // suivants exigent une session, et c'est normal.

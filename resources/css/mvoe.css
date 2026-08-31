@@ -131,10 +131,75 @@
 }
 
 @layer utilities {
-    /* Un rapport doit sortir comme un document, pas comme une capture. */
-    @media print {
-        .sans-impression {
-            display: none !important;
-        }
+    /* Une section qui ne doit pas être coupée par un saut de page. */
+    .insecable {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/*
+| L'impression.
+|
+| Le rapport trimestriel est un DOCUMENT : il se signe et se transmet. Sur
+| l'imprimante monochrome d'une délégation, un panneau coloré à ombre portée
+| sort en gris sale, et le jaune en gris pâle illisible. Toutes les surfaces
+| deviennent donc des encadrés au trait, et la navigation disparaît — personne
+| n'archive une barre latérale.
+|
+| Hors de tout `@layer` : ces règles doivent l'emporter sur les utilitaires.
+*/
+@media print {
+    .sans-impression,
+    .sidebar,
+    header,
+    footer {
+        display: none !important;
+    }
+
+    .main-content,
+    .main-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    body,
+    .panel,
+    .bande-brise-glace,
+    .bloc-sequence,
+    [class*='bg-jaune'],
+    [class*='bg-noir'] {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+    }
+
+    .panel {
+        border: 1px solid #000 !important;
+        border-radius: 0 !important;
+        padding: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    table {
+        border-collapse: collapse !important;
+    }
+
+    table th,
+    table td {
+        border: 1px solid #000 !important;
+        background: transparent !important;
+    }
+
+    /* Une ligne de tableau coupée en deux pages perd sa colonne d'écarts. */
+    tr,
+    section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    a[href]::after {
+        content: '';
     }
 }

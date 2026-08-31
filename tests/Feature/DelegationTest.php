@@ -206,7 +206,9 @@ class DelegationTest extends ApiTestCase
 
     public function test_la_feuille_dimpression_efface_le_jaune(): void
     {
-        $css = File::get(resource_path('css/app.css'));
+        // La feuille d'impression vit dans la couche Mvoé, importée par les
+        // deux bundles : l'administration imprime, le kit aussi.
+        $css = File::get(resource_path('css/mvoe.css'));
 
         [, $impression] = explode('@media print {', $css, 2);
         [$corps] = explode("\n}\n", $impression, 2);

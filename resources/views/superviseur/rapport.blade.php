@@ -16,22 +16,21 @@
         {{-- Sélecteur de période. Disparaît à l'impression. --}}
         <div class="sans-impression flex flex-wrap items-end gap-3">
             <div>
-                <label for="annee" class="etiquette">Année</label>
+                <label for="annee">Année</label>
                 <input id="annee" type="number" x-model.number="annee" min="2020" max="2100"
-                       class="champ chiffre w-32">
+                       class="form-input chiffre w-32">
             </div>
 
             <div>
-                <label for="trim" class="etiquette">Trimestre</label>
-                <select id="trim" x-model.number="trimestre"
-                        class="champ">
+                <label for="trim">Trimestre</label>
+                <select id="trim" x-model.number="trimestre" class="form-select">
                     <template x-for="t in [1, 2, 3, 4]" x-bind:key="t">
                         <option x-bind:value="t" x-text="t + 'ᵉ trimestre'"></option>
                     </template>
                 </select>
             </div>
 
-            <button type="button" class="btn btn-neutre" x-on:click="charger()">Afficher</button>
+            <button type="button" class="btn btn-outline-primary" x-on:click="charger()">Afficher</button>
             <button type="button" class="btn btn-primary" x-on:click="exporter()" x-bind:disabled="! donnees">
                 Exporter en PDF
             </button>
@@ -47,8 +46,8 @@
             <article class="space-y-6">
 
                 {{-- En-tête du document. --}}
-                <header class="border-b-2 border-noir pb-4">
-                    <p class="intitule">Programme national de parentalité positive</p>
+                <header class="border-b-2 border-white-light pb-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-white-dark">Programme national de parentalité positive</p>
                     <h1 class="mt-1 text-3xl">Rapport trimestriel</h1>
                     <p class="chiffre mt-2">
                         <span x-text="periode"></span> —
@@ -64,7 +63,9 @@
                 </header>
 
                 <template x-if="vide">
-                    <x-mvoe.vide>Aucune séance n'a été tenue sur ce trimestre.</x-mvoe.vide>
+                    <div class="panel">
+                        <p class="text-white-dark">Aucune séance n'a été tenue sur ce trimestre.</p>
+                    </div>
                 </template>
 
                 <template x-if="! vide">
@@ -82,8 +83,8 @@
                                     { t: 'Écarts relevés', v: donnees.synthese.ecarts_total },
                                 ]" x-bind:key="c.t">
                                     <div class="panel text-center">
-                                        <dt class="intitule text-xs" x-text="c.t"></dt>
-                                        <dd class="chiffre text-3xl" x-text="c.v"></dd>
+                                        <dt class="text-xs font-semibold uppercase tracking-wider text-white-dark" x-text="c.t"></dt>
+                                        <dd class="chiffre text-3xl font-bold mt-1" x-text="c.v"></dd>
                                     </div>
                                 </template>
                             </dl>
@@ -106,8 +107,8 @@
                         <section>
                             <h2 class="text-xl">Cohortes</h2>
 
-                            <div class="panel mt-3 overflow-x-auto">
-                                <table class="tableau">
+                            <div class="panel mt-3 table-responsive">
+                                <table>
                                     <thead>
                                         <tr>
                                             <th>Cohorte</th>
@@ -143,8 +144,8 @@
                                 peut le produire, faute d'une seconde source à confronter.
                             </p>
 
-                            <div class="panel mt-3 overflow-x-auto">
-                                <table class="tableau">
+                            <div class="panel mt-3 table-responsive">
+                                <table>
                                     <thead>
                                         <tr>
                                             <th>Facilitateur</th>

@@ -52,7 +52,8 @@
                         note="Vos codes vous ont été remis par votre facilitateur. Personne ne s'inscrit seul."
                         :reglages="null"
                         :compte="false"
-                        :manifeste="true">
+                        :manifeste="true"
+                        :terrain="true">
 
         @if ($barre)
             <x-slot:outils>

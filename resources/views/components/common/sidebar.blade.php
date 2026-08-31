@@ -31,7 +31,7 @@
                     <span class="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-semibold align-middle lg:inline dark:text-white-light">Mvoé</span>
                 </a>
                 <a href="javascript:;"
-                   class="collapse-icon w-8 h-8 rounded-full flex items-center hover:bg-gray-500/10 dark:hover:bg-dark-light/10 dark:text-white-light transition duration-300 rtl:rotate-180"
+                   class="collapse-icon w-8 h-8 rounded-full flex items-center hover:bg-black/[0.06] dark:hover:bg-dark-light/10 dark:text-white-light transition duration-300 rtl:rotate-180"
                    @click="$store.app.toggleSidebar()">
                     <svg class="w-5 h-5 m-auto" viewBox="0 0 24 24" fill="none">
                         <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />

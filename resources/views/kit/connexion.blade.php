@@ -43,7 +43,7 @@
 
                         @if (request()->query('session') === 'expiree')
                             <div class="mb-5 flex items-center rounded border border-warning bg-warning-light p-3.5 text-warning dark:bg-warning-dark-light">
-                                <span class="ltr:pr-2 rtl:pl-2"><strong class="ltr:mr-1 rtl:ml-1">Session expirée.</strong>Reconnectez-vous pour envoyer ce qui attend : rien n'a été perdu, tout est resté sur cet appareil.</span>
+                                <span class="ltr:pr-2 rtl:pl-2"><strong class="ltr:mr-1 rtl:ml-1">Votre session a expiré.</strong>Reconnectez-vous pour envoyer ce qui attend : rien n'a été perdu, tout est resté sur cet appareil.</span>
                             </div>
                         @endif
 

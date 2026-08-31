@@ -178,7 +178,12 @@ class AssistantEtQuestionsTest extends ApiTestCase
         // prescrit trois, et les questions figurent en deuxième position sur la
         // liste de ce qu'on coupe si le temps manque.
         $this->assertStringContainsString('/parent/questions', $accueil);
-        $this->assertStringContainsString("audioCarte('questions')", $accueil);
+
+        // Le lien et sa touche d'ecoute sont construits depuis un tableau PHP :
+        // on verifie la cle et le passage par l'aide audio, pas un litteral qui
+        // n'existe plus dans la source.
+        $this->assertStringContainsString("'cle' => 'questions'", $accueil);
+        $this->assertStringContainsString('audioCarte(', $accueil);
 
         foreach (['fr', 'en', 'bulu'] as $langue) {
             $this->assertFileExists(public_path("audio/interface/accueil-questions-$langue.wav"));

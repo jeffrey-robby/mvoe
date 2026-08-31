@@ -52,8 +52,8 @@
                                x-text="m.renseigne ? m.unites + ' unités à écouter' : 'Pas encore chargé'"></p>
                         </div>
 
-                        <span class="badge shadow-md shrink-0" x-show="! m.renseigne"
-                              x-bind:class="'bg-slate-400'">Bientôt</span>
+                        <span class="shrink-0 rounded px-2 py-0.5 text-xs font-semibold bg-white-light/60 text-white-dark"
+                              x-show="! m.renseigne">Bientôt</span>
                     </div>
 
                     <button type="button" class="btn btn-primary w-full mt-5"
