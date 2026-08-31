@@ -61,12 +61,12 @@
     @vite($entrees)
 </head>
 
+{{-- La coquille est IDENTIQUE dans les trois espaces : meme corps, meme barre
+     laterale, meme en-tete. Le systeme terrain ne s'applique qu'au CONTENU —
+     poser ses 17 px sur le corps les propagerait a la navigation, et le kit
+     n'aurait plus la meme chrome que la delegation. --}}
 <body x-data="main"
-      @class([
-          'antialiased relative font-nunito font-normal overflow-x-hidden',
-          'terrain' => $terrain,
-          'text-sm' => ! $terrain,
-      ])
+      class="antialiased relative font-nunito text-sm font-normal overflow-x-hidden"
       :class="[$store.app.sidebar ? 'toggle-sidebar' : '', $store.app.theme === 'dark' || $store.app.isDarkMode ? 'dark' : '', $store.app.menu, $store.app.layout, $store.app.rtlClass]">
 
     <div x-cloak class="fixed inset-0 bg-[black]/60 z-50 lg:hidden" :class="{ 'hidden': !$store.app.sidebar }"
@@ -87,7 +87,8 @@
                 @endisset
             </x-common.header>
 
-            <div class="p-6 animate__animated" :class="[$store.app.animation]">
+            <div @class(['p-6 animate__animated', 'terrain' => $terrain])
+                 :class="[$store.app.animation]">
                 {{ $slot }}
             </div>
 

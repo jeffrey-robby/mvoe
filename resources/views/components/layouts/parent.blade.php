@@ -63,17 +63,42 @@
                      n'existe pas. Le nom affiché est l'endonyme — personne ne
                      cherche « Bulu » écrit en français quand il ne lit pas le
                      français. --}}
-                <div class="flex gap-1" role="group" aria-label="Langue">
-                    <template x-for="l in languesOffertes()" x-bind:key="l.code">
-                        <button type="button" class="btn btn-sm" x-on:click="changerLangue(l.code)"
-                                x-bind:class="langue === l.code ? 'btn-primary' : 'btn-outline-primary'"
-                                x-bind:aria-pressed="langue === l.code"
-                                x-text="l.nom"></button>
-                    </template>
+                {{-- Le selecteur prend la forme des menus de l'en-tete du
+                     template, pour que les trois espaces aient la meme chrome.
+                     Il ne propose QUE les langues reellement disponibles pour
+                     le contenu ouvert : promettre une langue qui n'est pas
+                     chargee, c'est promettre un contenu qui n'existe pas. Le
+                     nom affiche est l'endonyme — personne ne cherche « Bulu »
+                     ecrit en francais quand il ne lit pas le francais. --}}
+                <div class="dropdown shrink-0" x-data="dropdown" @click.outside="open = false">
+                    <a href="javascript:;"
+                       class="flex items-center gap-2 rounded-full bg-white-light/40 dark:bg-dark/40 px-3 py-2 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
+                       @click="toggle" aria-label="Langue">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
+                        </svg>
+                        <span class="text-xs font-semibold uppercase"
+                              x-text="(languesOffertes().find(l => l.code === langue) || {}).nom ?? langue"></span>
+                    </a>
+
+                    <ul x-cloak x-show="open" x-transition x-transition.duration.300ms
+                        class="ltr:right-0 rtl:left-0 top-11 !py-0 w-[200px] font-semibold text-dark dark:text-white-dark absolute z-50 bg-white dark:bg-[#1b2e4b] rounded-md shadow-md">
+                        <template x-for="l in languesOffertes()" x-bind:key="l.code">
+                            <li>
+                                <a href="javascript:;" class="!py-3"
+                                   x-on:click="changerLangue(l.code); toggle()"
+                                   x-bind:class="langue === l.code ? 'bg-primary/10 text-primary' : ''"
+                                   x-bind:aria-pressed="langue === l.code"
+                                   x-text="l.nom"></a>
+                            </li>
+                        </template>
+                    </ul>
                 </div>
 
                 <button type="button" x-on:click="sortir()"
-                        class="flex items-center gap-2 p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90"
+                        class="flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60"
                         title="Sortir">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">

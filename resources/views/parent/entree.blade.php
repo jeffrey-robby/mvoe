@@ -40,13 +40,13 @@
                                                 class="btn btn-outline-primary btn-lg flex-1 justify-start"
                                                 x-text="l.nom"></button>
 
-                                        <button type="button" x-on:click="ecouterLangue(l.code)"
+                                        {{-- <button type="button" x-on:click="ecouterLangue(l.code)"
                                                 class="btn btn-primary btn-lg w-16 shrink-0"
                                                 x-bind:aria-label="'Écouter : ' + l.nom">
                                             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                                 <path d="M4 9v6h4l5 4V5L8 9H4z" />
                                             </svg>
-                                        </button>
+                                        </button> --}}
                                     </div>
                                 </template>
                             </div>
@@ -71,24 +71,18 @@
                                 Consulter les contenus
                             </button>
 
-                            <p class="text-center text-white-dark mt-3">
+                            <p class="text-center text-white-dark mt-3 mb-2">
                                 Sans code, sans inscription. Écoutez, lisez, revenez quand vous voulez.
                             </p>
 
-                            <div class="relative my-7 text-center md:mb-9">
-                                <span class="absolute inset-x-0 top-1/2 h-px w-full -translate-y-1/2 bg-white-light"></span>
-                                <span class="relative bg-white px-2 font-bold uppercase text-white-dark">Vous avez un code ?</span>
-                            </div>
+                          
 
                             <button type="button" x-on:click="ouvrirLeCode()"
                                     class="btn btn-outline-primary btn-lg w-full">
                                 Ouvrir ma session
                             </button>
 
-                            <p class="text-center text-white-dark mt-3">
-                                Votre facilitateur vous l'a remis en main propre. Il sert à répondre
-                                aux questions de la semaine et à recevoir les contenus dans votre langue.
-                            </p>
+                           
 
                             <button type="button" x-on:click="etape = 'langue'"
                                     class="btn btn-outline-primary w-full mt-8">
@@ -103,13 +97,7 @@
                             <div class="mb-10">
                                 <div class="flex items-start justify-between gap-3">
                                     <h1 class="text-3xl font-extrabold uppercase !leading-snug text-primary md:text-4xl">Vos codes</h1>
-                                    <button type="button" x-on:click="ecouterConsigne()"
-                                            class="btn btn-primary w-14 h-14 shrink-0"
-                                            aria-label="Écouter la consigne">
-                                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                            <path d="M4 9v6h4l5 4V5L8 9H4z" />
-                                        </svg>
-                                    </button>
+                                   
                                 </div>
                                 <p class="text-base font-bold leading-normal text-white-dark">
                                     Votre facilitateur vous les a remis en main propre.

@@ -23,7 +23,7 @@
 |
 */
 
-const VERSION = '8a6aa67ccc44';
+const VERSION = 'c69d95fc4316';
 
 const CACHES = {
     coquille: `mvoe-coquille-${VERSION}`,
@@ -35,8 +35,8 @@ const CACHES = {
 const RESSOURCES = [
     "/build/assets/admin.3b61ccfe.js",
     "/build/assets/api.bc7d4a2d.js",
-    "/build/assets/app.7e928a11.css",
     "/build/assets/app.7eef1047.js",
+    "/build/assets/app.8ec930b0.css",
     "/build/assets/archivo-latin-600-normal.d8536b90.woff",
     "/build/assets/archivo-latin-600-normal.d9e8c29f.woff2",
     "/build/assets/archivo-latin-700-normal.7eb23fce.woff",
@@ -113,7 +113,7 @@ const RESSOURCES = [
     "/build/assets/ibm-plex-sans-vietnamese-600-normal.ae433d3b.woff",
     "/build/assets/kit-auth.aa089a75.js",
     "/build/assets/kit.1503311f.js",
-    "/build/assets/kit.d5cf3765.css",
+    "/build/assets/kit.6e9c7999.css",
     "/build/assets/markdown-editor.854cb2a8.css",
     "/build/assets/nice-select.b1ccd362.css",
     "/build/assets/nice-select2.8faa6a66.css",

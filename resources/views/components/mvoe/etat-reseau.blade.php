@@ -21,5 +21,5 @@
          local s'ouvre avant qu'Alpine ne monte quoi que ce soit, et pendant ce
          court instant le repli est ce qui s'affiche. Annoncer « hors ligne »
          à chaque ouverture d'écran serait un mensonge répété. --}}
-    <span class="intitule text-xs text-white-dark" x-text="enLigne ? 'En ligne' : 'Hors ligne'">Réseau</span>
+    <span class="text-xs font-semibold uppercase text-white-dark" x-text="enLigne ? 'En ligne' : 'Hors ligne'">Réseau</span>
 </span>
