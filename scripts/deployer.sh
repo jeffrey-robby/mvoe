@@ -25,6 +25,13 @@ mkdir -p storage/framework/cache/data storage/framework/sessions \
 chmod -R 775 storage bootstrap/cache
 
 echo "→ Assets"
+# public/hot est le drapeau depose par `npm run dev`. Tant qu'il existe,
+# Laravel sert le CSS depuis 127.0.0.1:5174 — la machine du VISITEUR — et
+# ignore public/build. Les pages s'affichent alors sans une seule regle de
+# style. Il n'arrive jamais par git ; il vient d'un envoi FTP ou rsync du
+# dossier complet depuis un poste de developpement.
+rm -f public/hot
+
 # `npm run build` enchaine vite build PUIS generer-sw.mjs. Ne jamais lancer
 # l'un sans l'autre : le service worker nommerait les hachages du build
 # precedent, et le kit serait vide en mode avion.
