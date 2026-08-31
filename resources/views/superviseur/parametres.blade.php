@@ -20,10 +20,6 @@
                     Le plafond d'une cohorte se change ici, et prend effet immédiatement.
                 </p>
             </div>
-
-            <button type="button" class="btn btn-neutre" x-on:click="deconnecter()">
-                Fermer la session
-            </button>
         </div>
 
         <template x-if="chargement">

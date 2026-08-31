@@ -25,13 +25,27 @@ class QuestionController extends Controller
 
     public function index(): JsonResponse
     {
-        $questions = Question::with('options')->orderBy('ordre')->limit(self::PAR_SEMAINE)->get();
+        $questions = Question::with('options', 'unite')
+            ->orderBy('ordre')
+            ->limit(self::PAR_SEMAINE)
+            ->get();
 
         return response()->json([
             'questions' => $questions->map(fn (Question $q) => [
                 'id' => $q->id,
                 'enonce' => $q->enonce,
                 'enonce_audio' => $q->enonce_audio ? asset($q->enonce_audio) : null,
+
+                /*
+                | L'explication voyage avec la question, et non avec l'option.
+                | Le texte etant le meme quel que soit le choix, le servir des
+                | la liste ne revele rien : il n'y a pas de bonne reponse a
+                | proteger. C'est ce qui permet a un visiteur sans compte de
+                | lire ce que propose le programme, qui est toute la valeur de
+                | l'exercice — le clic, lui, n'en a aucune.
+                */
+                'explication' => $q->explication,
+                'reference' => $q->unite?->reference(),
                 'options' => $q->options->map(fn (Option $o) => [
                     'id' => $o->id,
                     'libelle' => $o->libelle,

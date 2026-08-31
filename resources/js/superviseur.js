@@ -1,4 +1,4 @@
-import { api, ErreurHorsLigne } from './api.js';
+import { api, ErreurHorsLigne, messageDeConnexion } from './api.js';
 
 /*
 |------------------------------------------------------------------------------
@@ -92,10 +92,10 @@ export function connexionDelegation() {
 
                 window.location.href = '/superviseur';
             } catch (e) {
-                this.erreur =
-                    e instanceof ErreurHorsLigne
-                        ? 'Le serveur est injoignable.'
-                        : 'Ces identifiants ne correspondent pas.';
+                this.erreur = messageDeConnexion(e, {
+                    horsLigne: 'Le serveur est injoignable.',
+                    refus: 'Ces identifiants ne correspondent pas.',
+                });
             } finally {
                 this.occupe = false;
             }
@@ -135,6 +135,17 @@ export function enteteDelegation() {
          */
         get estNational() {
             return this.niveau === 'national';
+        },
+
+        /**
+         * La déconnexion vit dans l'en-tête, donc dans ce composant : elle doit
+         * être atteignable depuis n'importe quel écran, pas seulement depuis
+         * celui qui l'hébergeait autrefois.
+         */
+        async fermerSession() {
+            await api.fermerSession(sessionDelegation.jeton()).catch(() => null);
+            sessionDelegation.fermer();
+            window.location.href = '/superviseur/connexion';
         },
     };
 }

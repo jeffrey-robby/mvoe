@@ -1,0 +1,21 @@
+/*
+| Polices auto-hébergées.
+|
+| Le kit doit garder exactement la même allure en mode avion. Une police
+| appelée chez Google disparaîtrait au moment précis où le facilitateur en a
+| besoin, et l'écran changerait de mise en page sous ses doigts. Ces fichiers
+| sont donc empaquetés par Vite et précachés par le service worker.
+|
+| Archivo pour les titres, IBM Plex Sans pour le corps, IBM Plex Mono pour
+| tout ce qui est chiffre, durée, compteur ou chronomètre.
+*/
+
+@import '@fontsource/archivo/600.css';
+@import '@fontsource/archivo/700.css';
+
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';

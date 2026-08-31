@@ -5,7 +5,7 @@
     systèmes qui cohabitent, la frontière entre eux, et les règles qui ne se
     négocient dans ni l'un ni l'autre.
 --}}
-<x-layouts.delegation titre="Système de design" :navigation="false">
+<x-layouts.delegation titre="Système de design">
 
     <div class="space-y-10">
 
@@ -55,9 +55,9 @@
                 </p>
                 <p class="mt-2 max-w-prose text-base">
                     Pour écrire, on utilise les variantes assombries :
-                    <span class="text-success-texte font-semibold">success-texte</span>,
-                    <span class="text-warning-texte font-semibold">warning-texte</span>,
-                    <span class="text-danger-texte font-semibold">danger-texte</span> — toutes
+                    <span class="text-success font-semibold">success</span>,
+                    <span class="text-warning font-semibold">warning</span>,
+                    <span class="text-danger font-semibold">danger</span> — toutes
                     au-dessus de 5,4:1. Le gris secondaire du template a lui aussi été assombri :
                     il ne faisait que 3,2:1.
                 </p>

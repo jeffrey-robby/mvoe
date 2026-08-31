@@ -4,6 +4,7 @@ import {
     formationFacilitateur, pointage, seance, signalerTerrain,
     tableauDeBordFacilitateur, visiteDomicile,
 } from './kit.js';
+import { apparence, dropdown, enteteKit, main } from './coquille.js';
 import { ouvrirMagasin } from './magasin.js';
 import {
     accueilParent, annuaireParent, assistantParent, ecouterParent,
@@ -24,6 +25,12 @@ import { demarrerSynchronisation } from './synchronisation.js';
 | facilitateur.
 */
 window.Alpine = Alpine;
+
+// La coquille du template : le kit garde son propre Alpine pour maîtriser
+// l'ordre de démarrage, et redonne donc lui-même ce que le balisage attend.
+Alpine.data('main', main);
+Alpine.data('dropdown', dropdown);
+Alpine.data('enteteKit', enteteKit);
 
 Alpine.data('compteurSync', compteurSync);
 Alpine.data('connexion', connexion);
@@ -60,6 +67,8 @@ Alpine.data('assistantParent', assistantParent);
 
 (async () => {
     await ouvrirMagasin();
+
+    Alpine.store('app', apparence);
 
     Alpine.start();
 

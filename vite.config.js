@@ -1,28 +1,34 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
-import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+    server: {
+        host: '127.0.0.1',
+    },
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
-            refresh: true,
-            // Les polices sont rapatriées et servies depuis notre propre
-            // domaine, jamais depuis un CDN : l'application doit fonctionner
-            // en mode avion, et une police qui ne charge pas casse la
-            // lisibilité de tout l'écran.
-            fonts: [
-                bunny('Archivo', { weights: [600, 700] }),
-                bunny('IBM Plex Sans', { weights: [400, 500, 600] }),
-                bunny('IBM Plex Mono', { weights: [400, 500, 600] }),
+            input: [
+                'resources/css/app.css',
+                'resources/js/admin.js',
+                'resources/css/kit.css',
+                'resources/js/app.js',
+                'resources/js/kit-auth.js',
+                'resources/css/highlight.min.css',
+                'resources/css/easymde.min.css',
+                'resources/css/fancybox.css',
+                'resources/css/flatpickr.min.css',
+                'resources/css/font-awesome.min.css',
+                'resources/css/fullcalendar.min.css',
+                'resources/css/highlight.min.css',
+                'resources/css/markdown-editor.css',
+                'resources/css/nice-select.css',
+                'resources/css/nice-select2.css',
+                'resources/css/nouislider.min.css',
+                'resources/css/quill.snow.css',
+                'resources/css/swiper-bundle.min.css',
+                'resources/css/tippy.css',
             ],
+            refresh: true,
         }),
-        tailwindcss(),
     ],
-    server: {
-        watch: {
-            ignored: ['**/storage/framework/views/**'],
-        },
-    },
 });

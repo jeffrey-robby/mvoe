@@ -1,87 +1,101 @@
 {{--
-    Le feuilleton.
-
-    Épisodes numérotés, en audio. La reprise se fait là où le parent s'était
-    arrêté, SANS JAMAIS LUI REPROCHER SON ABSENCE : pas de « vous avez manqué
-    deux épisodes », pas de pourcentage d'avancement, pas de série à ne pas
-    briser. Un épisode déjà commencé dit simplement « à reprendre ».
-
-    La position de lecture vit dans l'onglet, jamais sur le serveur : un
-    historique d'écoute sur un téléphone partagé dirait à quelqu'un d'autre ce
-    que ce parent écoute, et quand.
+    La reprise se fait là où le parent s'était arrêté, SANS JAMAIS LUI REPROCHER
+    SON ABSENCE : pas de « vous avez manqué deux épisodes », pas de pourcentage,
+    pas de série à ne pas briser. La position de lecture vit dans l'onglet,
+    jamais sur le serveur — un historique d'écoute sur un téléphone partagé
+    dirait à quelqu'un d'autre ce que ce parent écoute, et quand.
 --}}
 <x-layouts.parent titre="Le feuilleton" composant="feuilletonParent">
 
-    <div class="space-y-4">
+    <div class="mb-6">
+        <ul class="flex space-x-2 rtl:space-x-reverse mb-3">
+            <li>
+                <a href="/parent/accueil" class="text-primary hover:underline">Accueil</a>
+            </li>
+            <li class="before:content-['/'] ltr:before:mr-1 rtl:before:ml-1">
+                <span>Le feuilleton</span>
+            </li>
+        </ul>
 
-        <div class="flex items-center gap-3">
-            <a href="/parent/accueil"
-               class="flex size-tactile shrink-0 items-center justify-center rounded-net border-2 border-noir"
-               aria-label="Revenir">
-                <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2.5" stroke-linecap="square" aria-hidden="true">
-                    <path d="M15 5 8 12l7 7"/>
-                </svg>
-            </a>
+        <h2 class="text-2xl font-bold dark:text-white-light">Le feuilleton</h2>
+        <p class="text-white-dark mt-1" x-show="feuilleton" x-text="feuilleton?.resume"></p>
+    </div>
 
-            <h1 class="text-3xl">Le feuilleton</h1>
+    <div x-show="chargement" class="panel mb-6">
+        <p class="text-white-dark">Chargement…</p>
+    </div>
+
+    <div x-show="erreur" class="panel border-l-4 border-warning mb-6">
+        <p x-text="erreur"></p>
+    </div>
+
+    <template x-if="! chargement && ! feuilleton">
+        <div class="panel">
+            <p class="text-white-dark">Le feuilleton n'est pas encore disponible.</p>
         </div>
+    </template>
 
-        <p x-show="chargement" class="text-gris-texte">Chargement…</p>
-        <p x-show="erreur" x-text="erreur" class="rounded-net border-2 border-noir px-3 py-2"></p>
+    <template x-if="feuilleton">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <template x-if="! chargement && ! feuilleton">
-            <x-mvoe.vide>Le feuilleton n'est pas encore disponible.</x-mvoe.vide>
-        </template>
+            <div class="panel h-fit">
+                <h5 class="font-semibold text-lg dark:text-white-light mb-5" x-text="feuilleton.titre"></h5>
 
-        <template x-if="feuilleton">
-            <div class="space-y-4">
-
-                <div>
-                    <p class="text-2xl font-semibold [font-family:var(--font-titre)]"
-                       x-text="feuilleton.titre"></p>
-                    <p class="mt-2 text-base text-gris-texte" x-text="feuilleton.resume"></p>
-                </div>
-
-                <ul class="space-y-2">
+                <div class="space-y-2">
                     <template x-for="e in episodes" x-bind:key="e.id">
-                        <li>
-                            <button type="button" x-on:click="ouvrir(e)"
-                                    class="flex min-h-tactile w-full items-center gap-4 rounded-carte border-[3px] border-noir bg-blanc px-4 py-4 text-left hover:bg-jaune"
-                                    x-bind:class="episodeCourant?.id === e.id ? 'bg-jaune' : ''">
-                                <span class="chiffre shrink-0 text-2xl" x-text="e.numero"></span>
+                        <button type="button" x-on:click="ouvrir(e)"
+                                class="flex min-h-tactile w-full items-center gap-3 rounded-md px-3 text-left transition"
+                                x-bind:class="episodeCourant?.id === e.id
+                                    ? 'bg-primary-light text-primary font-semibold'
+                                    : 'border border-white-light dark:border-[#1b2e4b] hover:border-primary'">
+                            <span class="chiffre shrink-0 text-lg" x-text="e.numero"></span>
 
-                                <span class="flex-1">
-                                    <span class="block text-lg" x-text="e.titre"></span>
-                                    <span class="chiffre block text-sm text-gris-texte"
-                                          x-text="e.duree_lisible"></span>
-                                </span>
+                            <span class="flex-1 min-w-0">
+                                <span class="block truncate" x-text="e.titre"></span>
+                                <span class="chiffre block text-xs text-white-dark" x-text="e.duree_lisible"></span>
+                            </span>
 
-                                {{-- « À reprendre », pas « 37 % » : on ne mesure
-                                     pas l'assiduité de quelqu'un. --}}
-                                <span x-show="commence(e)" class="intitule shrink-0 text-xs">
-                                    À reprendre
-                                </span>
-                            </button>
-                        </li>
+                            {{-- « À reprendre », pas « 37 % » : on ne mesure pas
+                                 l'assiduité de quelqu'un. --}}
+                            <span class="badge bg-warning shadow-md shrink-0" x-show="commence(e)">
+                                À reprendre
+                            </span>
+                        </button>
                     </template>
-                </ul>
+                </div>
+            </div>
 
-                {{-- Le lecteur de l'épisode ouvert. --}}
+            <div class="lg:col-span-2">
+                <template x-if="! episodeCourant">
+                    <div class="panel">
+                        <p class="text-white-dark">
+                            Choisissez un épisode. Vous pouvez l'arrêter et le reprendre plus tard.
+                        </p>
+                    </div>
+                </template>
+
                 <template x-if="episodeCourant">
-                    <div class="rounded-carte border-[3px] border-noir p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <p class="text-xl font-semibold [font-family:var(--font-titre)]">
-                                <span class="chiffre" x-text="episodeCourant.numero + '.'"></span>
-                                <span x-text="episodeCourant.titre"></span>
-                            </p>
+                    <div class="panel">
+                        <div class="flex items-start justify-between gap-3 mb-5">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-white-dark">
+                                    Épisode <span class="chiffre" x-text="episodeCourant.numero"></span>
+                                </p>
+                                <h5 class="font-semibold text-lg dark:text-white-light mt-1"
+                                    x-text="episodeCourant.titre"></h5>
+                            </div>
 
-                            <button type="button" x-on:click="fermer()"
-                                    class="intitule shrink-0 underline underline-offset-4">Fermer</button>
+                            <button type="button" class="text-white-dark hover:text-dark" x-on:click="fermer()">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="1.5" stroke-linecap="round" class="w-6 h-6">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
                         </div>
 
                         <template x-if="episodeCourant.fichier_audio">
-                            <audio class="mt-3 w-full" controls preload="metadata"
+                            <audio class="w-full" controls preload="metadata"
                                    x-bind:src="episodeCourant.fichier_audio"
                                    x-on:loadedmetadata="reprendre($event.target, episodeCourant)"
                                    x-on:timeupdate.throttle.2000ms="noter($event.target, episodeCourant)"
@@ -89,18 +103,17 @@
                         </template>
 
                         <template x-if="! episodeCourant.fichier_audio">
-                            <p class="mt-3 rounded-net bg-jaune-sourd px-3 py-3 text-base">
-                                Cet épisode n'est pas encore enregistré.
-                            </p>
+                            <div class="flex items-center rounded border border-warning bg-warning-light p-3.5 text-warning">
+                                <span>Cet épisode n'est pas encore enregistré.</span>
+                            </div>
                         </template>
 
-                        <p x-show="commence(episodeCourant)"
-                           class="chiffre mt-2 text-sm text-gris-texte">
+                        <p class="chiffre text-white-dark text-xs mt-3" x-show="commence(episodeCourant)">
                             Reprise à <span x-text="minutes(positionDe(episodeCourant))"></span>
                         </p>
                     </div>
                 </template>
             </div>
-        </template>
-    </div>
+        </div>
+    </template>
 </x-layouts.parent>

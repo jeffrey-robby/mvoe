@@ -1,4 +1,4 @@
-import { api, ErreurHorsLigne } from './api.js';
+import { api, ErreurHorsLigne, messageDeConnexion } from './api.js';
 import { file, libelles, paquet, seanceEnCours, session } from './magasin.js';
 
 /*
@@ -88,10 +88,10 @@ export function connexion() {
                 await session.ouvrir(reponse.jeton, reponse.facilitateur);
                 window.location.href = '/kit';
             } catch (e) {
-                this.erreur =
-                    e instanceof ErreurHorsLigne
-                        ? "Vous êtes hors ligne. La première connexion demande du réseau, une seule fois."
-                        : 'Ces identifiants ne correspondent pas.';
+                this.erreur = messageDeConnexion(e, {
+                    horsLigne: "Vous êtes hors ligne. La première connexion demande du réseau, une seule fois.",
+                    refus: 'Ces identifiants ne correspondent pas.',
+                });
             } finally {
                 this.occupe = false;
             }

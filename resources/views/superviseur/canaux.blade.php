@@ -109,7 +109,7 @@
                                 </p>
 
                                 <p class="mt-2 flex flex-wrap items-baseline gap-x-2">
-                                    <span class="chiffre text-3xl text-success-texte">
+                                    <span class="chiffre text-3xl text-success">
                                         +<span x-text="nombre(radio.surcroit.surcroit_pourcent)"></span> %
                                     </span>
                                     <span class="text-base">

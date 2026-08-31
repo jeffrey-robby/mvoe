@@ -1,0 +1,48 @@
+/*
+| Feuille du kit facilitateur.
+|
+| Le kit reprend la coquille de l'administration — barre latérale, en-tête,
+| pied de page — donc il lui faut exactement la même feuille. On y ajoute deux
+| choses que l'administration n'a pas besoin de connaître :
+|
+|   - les polices auto-hébergées, parce qu'une police appelée chez Google
+|     disparaîtrait au moment précis où le facilitateur passe en mode avion ;
+|   - la base « terrain » : corps a 17 px et contour de focus epais, pour un
+|     écran tenu d'une main en plein soleil.
+*/
+
+@import 'fonts.css';
+@import 'app.css';
+
+@layer base {
+    .terrain {
+        @apply text-[17px] leading-relaxed;
+    }
+
+    .terrain h1 {
+        @apply text-3xl;
+    }
+
+    .terrain h2 {
+        @apply text-2xl;
+    }
+
+    .terrain h3 {
+        @apply text-xl;
+    }
+
+    /* Le focus doit se voir en plein soleil : contour noir epais, pas un halo
+       bleu pale. */
+    .terrain :focus-visible {
+        @apply outline outline-[3px] outline-offset-2 outline-noir;
+    }
+
+    .sur-noir :focus-visible {
+        @apply outline-blanc;
+    }
+
+    .sur-noir a,
+    .sur-noir button {
+        @apply text-blanc;
+    }
+}

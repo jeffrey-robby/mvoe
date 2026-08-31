@@ -155,18 +155,38 @@ Route::middleware(['auth:sanctum', 'abilities:superviseur'])
  * Le jeton expire après quelques minutes et n'est jamais renouvelé
  * silencieusement : le téléphone est souvent partagé au sein du foyer.
  */
+/*
+ * Lecture : AUCUN compte requis.
+ *
+ * Les contenus du programme sont produits et validés par le ministère pour
+ * etre lus. Exiger un code pour les consulter reviendrait a les reserver aux
+ * parents deja inscrits, c'est-a-dire a ceux qui en ont le moins besoin.
+ *
+ * Ces routes ne rendent RIEN de personnel : des unites validees, des episodes,
+ * des questions de la semaine, et un assistant a corpus ferme dont le journal
+ * ne porte aucun identifiant. Un jeton reste accepte — il sert alors a servir
+ * la langue attachee au dossier du parent.
+ */
+Route::prefix('parent')->group(function () {
+    Route::get('modules', [CatalogueController::class, 'modules']);
+    Route::get('modules/{module}/unites', [CatalogueController::class, 'unites']);
+    Route::get('unites/{unite}', [CatalogueController::class, 'unite']);
+
+    Route::get('feuilletons', [FeuilletonController::class, 'index']);
+
+    Route::get('questions', [QuestionController::class, 'index']);
+
+    Route::get('situations', [AssistantController::class, 'situations']);
+    Route::post('assistant', [AssistantController::class, 'poser'])->middleware('throttle:assistant');
+});
+
+/*
+ * Ce qui s'attache a une personne exige un compte. Repondre a la question de
+ * la semaine ecrit quelque chose au nom d'un parent : cela ne se fait pas
+ * anonymement.
+ */
 Route::middleware(['auth:sanctum', 'abilities:parent'])
     ->prefix('parent')
     ->group(function () {
-        Route::get('modules', [CatalogueController::class, 'modules']);
-        Route::get('modules/{module}/unites', [CatalogueController::class, 'unites']);
-        Route::get('unites/{unite}', [CatalogueController::class, 'unite']);
-
-        Route::get('feuilletons', [FeuilletonController::class, 'index']);
-
-        Route::get('questions', [QuestionController::class, 'index']);
         Route::post('questions/{question}/reponse', [QuestionController::class, 'repondre']);
-
-        Route::get('situations', [AssistantController::class, 'situations']);
-        Route::post('assistant', [AssistantController::class, 'poser'])->middleware('throttle:assistant');
     });

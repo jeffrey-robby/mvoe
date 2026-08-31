@@ -1,0 +1,140 @@
+/*
+| Couche Mvoé.
+|
+| Le template couvre l'administration : panneaux, tableaux, formulaires. Ce
+| fichier ajoute ce que le template ne sait pas faire — la typographie imposée
+| par le cahier des charges, et le système « terrain » du kit de séance, qui
+| est délibérément un autre langage visuel.
+*/
+
+@layer base {
+    :root {
+        --font-titre: 'Archivo', sans-serif;
+        --font-corps: 'IBM Plex Sans', sans-serif;
+        --font-chiffre: 'IBM Plex Mono', monospace;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: var(--font-titre);
+        @apply font-bold;
+    }
+}
+
+@layer components {
+    /* Tout ce qui est chiffre, durée, compteur ou chronomètre. Chasse fixe et
+       chiffres tabulaires : la colonne ne bouge pas, elle se lit d'un coup. */
+    .chiffre {
+        font-family: var(--font-chiffre);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Intitulé de section : capitales, interlettrage, petite taille. */
+    .intitule {
+        font-family: var(--font-titre);
+        @apply text-xs font-semibold uppercase tracking-wider;
+    }
+
+    .badge-succes {
+        @apply bg-success text-white;
+    }
+
+    .badge-alerte {
+        @apply bg-danger text-white;
+    }
+
+    .badge-neutre {
+        @apply bg-white-light text-gris-texte dark:bg-dark dark:text-white-dark;
+    }
+
+    /* Bouton neutre du kit : contour net, cible tactile. */
+    .btn-neutre {
+        @apply min-h-tactile rounded-net border-2 border-noir bg-blanc px-5 text-base font-semibold text-noir hover:bg-jaune-sourd;
+        font-family: var(--font-titre);
+    }
+
+    /* Champ de saisie du kit. 17 px minimum : lisible en plein soleil. */
+    .champ {
+        @apply block min-h-tactile w-full rounded-net border-2 border-ligne bg-blanc px-3 text-[17px] text-noir focus:border-noir focus:outline-none;
+    }
+
+    /* Tableau de données. */
+    .tableau {
+        @apply w-full text-left;
+    }
+
+    .tableau th {
+        font-family: var(--font-titre);
+        @apply whitespace-nowrap border-b border-white-light px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white-dark;
+    }
+
+    .tableau td {
+        @apply border-b border-white-light px-3 py-2 align-top;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* La colonne de séance — l'élément signature.                         */
+    /*                                                                     */
+    /* Chaque séquence occupe une hauteur PROPORTIONNELLE à sa durée       */
+    /* officielle : la variable --minutes est posée par le composant et    */
+    /* par le template Alpine, qui ne peuvent donc pas diverger.           */
+    .bloc-sequence {
+        min-height: calc(var(--minutes, 5) * 6px + 64px);
+        @apply flex flex-col justify-between gap-2 rounded-net border-2 border-noir p-4;
+    }
+
+    .bloc-sequence[data-etat='a_venir'] {
+        @apply bg-blanc text-noir;
+    }
+
+    .bloc-sequence[data-etat='en_cours'] {
+        @apply bg-jaune text-noir;
+    }
+
+    .bloc-sequence[data-etat='passee'] {
+        @apply border-noir bg-noir text-blanc;
+    }
+
+    /* Le brise-glace. Bande jaune pleine, aucun contrôle, aucun chronomètre :
+       le moment où l'outil se retire et où la salle prend le relais. */
+    .bande-brise-glace {
+        font-family: var(--font-titre);
+        @apply bg-jaune font-bold text-noir;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Pointage. Un appui fait défiler à pointer → présent → absent →      */
+    /* binôme ; on ne revient jamais à « à pointer ».                      */
+    .pastille {
+        @apply flex min-h-tactile flex-col items-center justify-center rounded-net border-2 border-noir px-2 py-2 text-center;
+    }
+
+    .pastille[data-etat='a_pointer'] {
+        @apply bg-blanc text-noir;
+    }
+
+    .pastille[data-etat='present'] {
+        @apply bg-noir text-blanc;
+    }
+
+    .pastille[data-etat='absent'] {
+        @apply border-dashed bg-blanc text-gris-texte;
+    }
+
+    .pastille[data-etat='rattrape_binome'] {
+        @apply bg-jaune text-noir;
+    }
+}
+
+@layer utilities {
+    /* Un rapport doit sortir comme un document, pas comme une capture. */
+    @media print {
+        .sans-impression {
+            display: none !important;
+        }
+    }
+}

@@ -171,10 +171,10 @@
                                                      quoi qu'il arrive ; l'appui typographique ne fait
                                                      qu'attirer l'œil, il ne porte pas l'information. --}}
                                                 <td class="chiffre text-right"
-                                                    x-bind:class="f.declarees_jamais_ouvertes > 0 ? 'text-warning-texte font-semibold' : ''"
+                                                    x-bind:class="f.declarees_jamais_ouvertes > 0 ? 'text-warning font-semibold' : ''"
                                                     x-text="f.declarees_jamais_ouvertes"></td>
                                                 <td class="chiffre text-right"
-                                                    x-bind:class="f.ouvertes_declarees_non_faites > 0 ? 'text-warning-texte font-semibold' : ''"
+                                                    x-bind:class="f.ouvertes_declarees_non_faites > 0 ? 'text-warning font-semibold' : ''"
                                                     x-text="f.ouvertes_declarees_non_faites"></td>
 
                                                 <td class="chiffre text-right"

@@ -200,3 +200,24 @@ export const api = {
 
     fermerSession: (jeton) => appeler('session', { methode: 'DELETE', jeton }),
 };
+
+/**
+ * Le message d'une connexion refusée.
+ *
+ * Un refus de débit N'EST PAS un refus d'identifiants. Les confondre envoie
+ * quelqu'un vérifier un code qui était juste — c'est arrivé, et l'on cherche
+ * alors du côté du mot de passe pendant que le compteur redescend tout seul.
+ */
+export function messageDeConnexion(e, messages) {
+    if (e instanceof ErreurHorsLigne) return messages.horsLigne;
+
+    if (e?.statut === 429) {
+        return 'Trop d\'essais depuis cet appareil. Attendez une minute avant de réessayer.';
+    }
+
+    if (e?.statut >= 500) {
+        return 'Le serveur ne répond pas correctement. Réessayez dans un instant.';
+    }
+
+    return messages.refus;
+}

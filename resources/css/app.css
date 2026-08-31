@@ -1,568 +1,680 @@
-@import 'tailwindcss';
+/* perfect scrollbar */
+@import 'perfect-scrollbar.min.css';
 
-/*
-| Le template Vristo est conserve dans `template/` comme reference : on y lit
-| ses composants et ses reglages. Mais ses 106 vues ne sont PAS des sources de
-| l'application -- les scanner ferait passer la feuille de 16 a 215 Ko de
-| classes que personne n'utilise, dont un mode sombre entier.
-*/
-@source not "../../template";
+/* animate.css */
+@import 'animate.css';
 
-/*
-|==============================================================================
-| Système de design Mvoé
-|==============================================================================
-|
-| DEUX SYSTÈMES QUI COHABITENT, et c'est délibéré.
-|
-| 1. L'ADMINISTRATION (MINPROFF, délégations) reprend le template Vristo :
-|    fond gris très clair, panneaux blancs à ombre douce, palette sémantique
-|    de sept couleurs, densité de bureau. C'est un outil qu'on utilise assis,
-|    à la souris, sur un grand écran.
-|
-| 2. LE TERRAIN (kit de séance, espace parent) garde le système Mvoé : jaune,
-|    blanc, noir, grands blocs, cibles de 48 px, corps de 17 px. C'est un
-|    outil qu'on tient d'une main, en plein soleil, dans une salle sans
-|    électricité. La grille du template n'y a pas sa place.
-|
-| Le passage de l'un à l'autre se fait par la classe `.terrain` sur <body>.
-|
-| CE QUI NE SE NÉGOCIE PAS, dans les deux systèmes :
-|   - la typographie : Archivo, IBM Plex Sans, IBM Plex Mono ;
-|   - le contraste : les couleurs sémantiques sont des SURFACES. Sur blanc,
-|     `warning` fait 2,2:1 et `success` 3,0:1 — elles échouent comme couleur
-|     de texte. Le texte reste sur `black` ou sur blanc ;
-|   - la colonne de séance et sa bande de brise-glace.
-|
-*/
+/* quill editor */
+@import 'quill-editor.css';
 
-@theme {
-    /*
-    |--------------------------------------------------------------------------
-    | Palette Vristo — l'administration
-    |--------------------------------------------------------------------------
-    |
-    | Sept couleurs sémantiques. Chacune existe en pleine (surface, bouton,
-    | badge) et en `-light` (fond de rappel très pâle, sur lequel du texte
-    | sombre reste lisible).
-    */
-    --color-primary: #4361ee;
-    --color-primary-light: #eaf1ff;
+/* full calendar */
+@import 'fullcalendar.css';
 
-    --color-secondary: #805dca;
-    --color-secondary-light: #ebe4f7;
+/* swiper */
+@import 'swiper.css';
 
-    --color-success: #00ab55;
-    --color-success-light: #ddf5f0;
+/* sweetalert */
+@import 'sweetalert.css';
 
-    --color-danger: #e7515a;
-    --color-danger-light: #fff5f5;
+/* tippy */
+@import 'tippy.css';
 
-    --color-warning: #e2a03f;
-    --color-warning-light: #fff9ed;
+/* noUi-slider */
+@import 'noui-slider.css';
 
-    --color-info: #2196f3;
-    --color-info-light: #e7f7ff;
+/* flatpickr */
+@import 'flatpickr.css';
 
-    --color-dark: #3b3f5c;
-    --color-dark-light: #eaeaec;
+/* file upload with preview */
+@import 'file-upload-preview.css';
 
-    /* Le seul noir sûr partout : 18,0:1 sur blanc. */
-    --color-black: #0e1726;
-    --color-black-light: #e3e4eb;
+/* markdown-editor */
+@import 'markdown-editor.css';
 
-    --color-white: #ffffff;
-    --color-white-light: #e0e6ed;
+/* select2 */
+@import 'select2.css';
 
-    /*
-    | Le gris de texte secondaire. Vristo utilise #888ea8, qui ne fait que
-    | 3,2:1 sur blanc et échoue le seuil AA du texte courant. Assombri jusqu'à
-    | 4,8:1 en conservant sa teinte bleu-gris. L'accessibilité est un critère
-    | noté du concours, et cet écran sera lu en plein soleil.
-    */
-    --color-white-dark: #667292;
+/* scrumboard */
+@import 'scrumboard.css';
 
-    /*
-    |--------------------------------------------------------------------------
-    | Les couleurs sémantiques en TEXTE
-    |--------------------------------------------------------------------------
-    |
-    | Les couleurs pleines sont des SURFACES. Posées en texte sur blanc, elles
-    | échouent : `warning` fait 2,2:1, `success` 3,0:1, `danger` 3,6:1 — le
-    | même piège que le jaune du système terrain, à l'identique.
-    |
-    | Ces trois variantes assombries existent pour le texte, et pour lui seul.
-    | `primary` n'en a pas besoin : il passe déjà à 4,8:1.
-    */
-    --color-success-texte: #007a3d;
-    --color-warning-texte: #8a5a00;
-    --color-danger-texte: #c02730;
+/* simple-datatable */
+@import 'simple-datatables.css';
 
-    /* Le fond de l'administration. */
-    --color-fond: #fafafa;
+/* dragndrop */
+@import 'dragndrop.css';
 
-    /*
-    |--------------------------------------------------------------------------
-    | Palette Mvoé — le terrain
-    |--------------------------------------------------------------------------
-    |
-    | Conservée pour le kit de séance et l'espace parent. Le jaune reste une
-    | SURFACE : le texte qui s'y pose est noir, jamais l'inverse.
-    */
-    --color-noir: #121212;
-    --color-jaune: #f5c518;
-    --color-jaune-sourd: #fdf3d0;
-    --color-blanc: #ffffff;
-    --color-ligne: #e4e4e4;
-    --color-gris-texte: #6b6b6b;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Typographie — identique dans les deux systèmes
-    |--------------------------------------------------------------------------
-    |
-    | Archivo pour les titres. IBM Plex Sans pour le corps : il tient bien les
-    | diacritiques françaises. IBM Plex Mono pour tout ce qui se compte —
-    | chronomètres, compteurs, durées, effectifs, identifiants. Ce n'est pas
-    | décoratif : l'application est un instrument de mesure, et des chiffres
-    | alignés se lisent d'un coup d'œil.
-    */
-    --font-titre: 'Archivo', 'Segoe UI', system-ui, sans-serif;
-    --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+/* couche Mvoé */
+@import 'mvoe.css';
 
-    /*
-    |--------------------------------------------------------------------------
-    | Échelle
-    |--------------------------------------------------------------------------
-    |
-    | `base` vaut 15 px pour l'administration. Sur le terrain, `.terrain` le
-    | remonte à 17 px, qui est le plancher absolu du corps de texte là-bas.
-    */
-    --text-xs: 0.75rem; /* 12 px — mentions, badges */
-    --text-sm: 0.8125rem; /* 13 px */
-    --text-base: 0.9375rem; /* 15 px */
-    --text-lg: 1.0625rem; /* 17 px */
-    --text-xl: 1.25rem; /* 20 px */
-    --text-2xl: 1.5rem; /* 24 px */
-    --text-3xl: 1.875rem; /* 30 px */
-    --text-4xl: 2.5rem; /* 40 px */
-    --text-5xl: 4rem; /* 64 px — chronomètre de séance */
-
-    /* Cible tactile minimale du terrain. Le doigt qui appuie tient
-       peut-être un enfant de l'autre bras. */
-    --spacing-tactile: 3rem;
-
-    --radius-net: 0.25rem;
-    --radius-carte: 0.5rem;
-
-    /* L'ombre douce des panneaux Vristo. */
-    --shadow-panneau: 0 2px 2px rgb(224 230 237 / 46%), 1px 6px 7px rgb(224 230 237 / 46%);
-}
-
-@layer base {
+@layer components {
     html {
-        -webkit-text-size-adjust: 100%;
-        scroll-behavior: smooth;
+        @apply scroll-smooth;
     }
 
-    body {
-        background-color: var(--color-fond);
-        color: var(--color-black);
-        font-family: var(--font-sans);
-        font-size: var(--text-base);
-        line-height: 1.55;
-    }
-
-    /*
-    | Le terrain. Fond blanc franc, corps à 17 px, densité relâchée : cet écran
-    | sera lu en plein soleil, tenu d'une main.
-    */
-    body.terrain {
-        background-color: var(--color-blanc);
-        color: var(--color-noir);
-        font-size: 1.0625rem;
-    }
-
-    h1,
-    h2,
-    h3,
-    h4 {
-        font-family: var(--font-titre);
-        font-weight: 700;
-        line-height: 1.15;
-        text-wrap: balance;
-    }
-
-    /*
-    | Tous les chiffres sont tabulaires, partout, sans avoir à y penser : une
-    | colonne de durées ne doit pas danser quand un chiffre change.
-    */
-    :where(time, output, .chiffre) {
-        font-family: var(--font-mono);
-        font-variant-numeric: tabular-nums;
-    }
-
-    /*
-    | Focus visible et épais. Le clavier et le lecteur d'écran sont des
-    | critères notés du concours, pas une option.
-    */
-    :focus-visible {
-        outline: 3px solid var(--color-black);
-        outline-offset: 2px;
-    }
-
-    .terrain :focus-visible {
-        outline-color: var(--color-noir);
-    }
-
-    /* Sur une surface sombre, le liseré sombre serait invisible. */
-    .sur-noir :focus-visible,
-    .sur-noir:focus-visible {
-        outline-color: var(--color-white);
-    }
-
-    [hidden],
     [x-cloak] {
         display: none !important;
     }
-}
-
-/*
-|==============================================================================
-| Impression
-|==============================================================================
-|
-| Le livrable du superviseur est un DOCUMENT : un rapport trimestriel imprimé,
-| signé, transmis. Et la fiche d'identifiants d'un facilitateur sera recopiée
-| ou glissée dans une pochette.
-|
-| Rien ne s'imprime en couleur : sur une imprimante monochrome de délégation,
-| les aplats sortiraient en gris pâle illisibles. Tout redevient noir sur
-| blanc, et les surfaces colorées deviennent des encadrés au trait.
-|
-*/
-
-@media print {
-    @page {
-        size: A4;
-        margin: 16mm 14mm;
-    }
-
-    .sans-impression {
-        display: none !important;
-    }
 
     body {
-        background: #fff;
-        font-size: 10.5pt;
-        line-height: 1.4;
+        @apply bg-[#fafafa] font-nunito;
     }
 
-    main {
-        max-width: none;
-        padding: 0;
+    body.dark {
+        @apply bg-[#060818];
     }
 
+    /* Panel */
     .panel {
-        box-shadow: none;
-        border: 1px solid #121212;
+        @apply relative rounded-md bg-white p-5 shadow dark:bg-[#0e1726];
     }
 
-    /* Une ligne de tableau ne se coupe pas entre deux pages. */
-    tr,
-    .insecable {
-        break-inside: avoid;
+    /* Navbar */
+    .navbar-sticky header,
+    .navbar-floating header {
+        @apply sticky top-0 z-20;
+    }
+    .navbar-floating header {
+        @apply bg-[#fafafa]/90 px-6 pt-4 dark:bg-[#060818]/90;
+    }
+    .navbar-floating header > div > div:first-child {
+        @apply rounded-md;
+    }
+    .horizontal .navbar-floating header > div > div:first-child {
+        @apply rounded-b-none;
+    }
+    .horizontal .navbar-floating header .horizontal-menu {
+        @apply rounded-b-md;
     }
 
-    h1,
-    h2 {
-        break-after: avoid;
+    /* Sidebar */
+    .sidebar:hover .nav-item > a {
+        @apply w-auto;
     }
 
-    .bg-jaune,
-    .bg-jaune-sourd,
-    [class*='bg-primary'],
-    [class*='bg-success'],
-    [class*='bg-warning'],
-    [class*='bg-danger'],
-    [class*='bg-info'] {
-        background: transparent !important;
-        color: #121212 !important;
-        border: 1px solid #121212;
+    .sidebar .nav-item > button,
+    .sidebar .nav-item > a {
+        @apply mb-1 flex w-full items-center justify-between overflow-hidden whitespace-nowrap rounded-md p-2.5 text-[#506690] hover:bg-[#000]/[0.08] hover:text-black dark:hover:bg-[#181f32] dark:hover:text-white-dark;
+    }
+    .sidebar .nav-item > button.active,
+    .sidebar .nav-item > a.active {
+        @apply bg-[#000]/[0.08] text-black dark:bg-[#181f32] dark:text-white-dark;
     }
 
-    a[href]::after {
-        content: '';
-    }
-}
-
-/*
-|==============================================================================
-| Composants de l'administration — repris du template
-|==============================================================================
-*/
-
-@layer components {
-    /* La surface de base de tous les écrans de délégation. */
-    .panel {
-        position: relative;
-        border-radius: 0.375rem;
-        background-color: var(--color-white);
-        padding: 1.25rem;
-        box-shadow: var(--shadow-panneau);
+    .sidebar .nav-item > button.active > div > span,
+    .sidebar .nav-item > a.active > div > span {
+        @apply dark:!text-white-dark;
     }
 
-    /*
-    | Les boutons. Le halo coloré sous le bouton plein est la signature
-    | visuelle du template ; il disparaît au survol.
-    */
+    .sidebar ul.sub-menu li button,
+    .sidebar ul.sub-menu li a {
+        @apply flex w-full items-center px-9 py-2.5 before:h-0.5 before:w-2 before:rounded before:bg-gray-300 hover:bg-gray-100
+hover:text-primary hover:before:!bg-primary ltr:before:mr-2 rtl:before:ml-2 dark:before:bg-gray-500 dark:hover:bg-gray-900 dark:hover:text-primary;
+    }
+    .sidebar ul.sub-menu li button.active,
+    .sidebar ul.sub-menu li a.active {
+        @apply text-primary before:bg-primary;
+    }
+
+    .sidebar .nav-item a div:first-child svg,
+    .sidebar .nav-item button div:first-child svg {
+        @apply h-5 w-5 text-black/50 dark:text-white/50;
+    }
+
+    .main-container .main-content {
+        @apply transition-all duration-300 lg:ltr:ml-[260px] lg:rtl:mr-[260px];
+    }
+
+    /* Horizontal layouts */
+    .horizontal .horizontal-menu {
+        @apply hidden shadow-md lg:flex;
+    }
+    .horizontal .horizontal-logo {
+        @apply flex;
+    }
+    .horizontal .main-container .main-content {
+        @apply ltr:ml-0 rtl:mr-0;
+    }
+    .horizontal .sidebar {
+        @apply ltr:-left-[260px] rtl:-right-[260px];
+    }
+    .horizontal.toggle-sidebar .sidebar {
+        @apply ltr:left-0 rtl:right-0 lg:ltr:-left-[260px] lg:rtl:-right-[260px];
+    }
+
+    .horizontal .nav-item a div:first-child svg {
+        @apply h-5 w-5 text-black/50 dark:text-white/50;
+    }
+
+    .horizontal .dark .nav-item a div:first-child svg,
+    .dark.horizontal .nav-item a div:first-child svg {
+        @apply text-white/50;
+    }
+
+    .horizontal-menu .nav-link {
+        @apply flex items-center rounded-lg py-2.5 px-2 hover:bg-[#000]/[0.08] hover:text-black dark:hover:bg-[#181f32] dark:hover:text-white-dark xl:px-4;
+    }
+
+    .horizontal-menu .nav-link.active {
+        @apply bg-[#000]/[0.08] text-black dark:bg-[#181f32] dark:text-white-dark;
+    }
+
+    .horizontal-menu ul.sub-menu {
+        @apply absolute top-full z-20 hidden min-w-[180px] rounded bg-white p-0 py-2 text-dark shadow dark:bg-[#1b2e4b] dark:text-white-dark;
+    }
+
+    .horizontal-menu ul.sub-menu a {
+        @apply flex items-center justify-between px-4 py-2 hover:bg-gray-100 hover:text-primary dark:hover:bg-primary/10;
+    }
+
+    .horizontal-menu ul.sub-menu a.active {
+        @apply bg-gray-100 text-primary dark:bg-primary/10;
+    }
+
+    .horizontal-menu > li.nav-item:hover > ul.sub-menu,
+    .horizontal-menu > li.nav-item > ul.sub-menu > li:hover > ul {
+        @apply block;
+    }
+
+    /* Vertical layouts */
+    .vertical.toggle-sidebar .horizontal-logo,
+    .vertical.toggle-sidebar .collapse-icon {
+        @apply flex;
+    }
+    .vertical.toggle-sidebar .main-container .main-content {
+        @apply ltr:ml-0 rtl:mr-0;
+    }
+    .vertical .sidebar {
+        @apply ltr:-left-[260px] rtl:-right-[260px] lg:ltr:left-0 lg:rtl:right-0;
+    }
+    .vertical.toggle-sidebar .sidebar {
+        @apply ltr:left-0 rtl:right-0 lg:ltr:-left-[260px] lg:rtl:-right-[260px];
+    }
+
+    /* Collapsible vertical layouts */
+    .collapsible-vertical .sidebar {
+        @apply hover:w-[260px] ltr:-left-[260px] rtl:-right-[260px] lg:w-[70px] lg:ltr:left-0 lg:rtl:right-0;
+    }
+    .collapsible-vertical.toggle-sidebar .sidebar {
+        @apply ltr:left-0 rtl:right-0;
+    }
+    .collapsible-vertical.toggle-sidebar .sidebar {
+        @apply lg:w-[260px];
+    }
+    .collapsible-vertical.toggle-sidebar .sidebar .nav-item > a {
+        @apply w-auto;
+    }
+    .collapsible-vertical.toggle-sidebar .main-content {
+        @apply lg:w-[calc(100%-260px)] lg:ltr:ml-[260px] lg:rtl:mr-[260px];
+    }
+
+    .collapsible-vertical .sidebar .sub-menu {
+        @apply lg:hidden;
+    }
+    .collapsible-vertical .sidebar:hover .sub-menu,
+    .collapsible-vertical .sidebar:hover .sub-menu.recent-submenu,
+    .collapsible-vertical.toggle-sidebar .sidebar .sub-menu {
+        @apply block;
+    }
+    .collapsible-vertical .main-content {
+        @apply lg:w-[calc(100%-70px)] lg:ltr:ml-[70px] lg:rtl:mr-[70px];
+    }
+    .collapsible-vertical .sidebar .collapse-icon,
+    .collapsible-vertical .main-logo > span {
+        @apply transition-opacity duration-300 lg:opacity-0;
+    }
+    .collapsible-vertical .sidebar:hover .collapse-icon,
+    .collapsible-vertical.toggle-sidebar .collapse-icon,
+    .collapsible-vertical .sidebar:hover .main-logo > span,
+    .collapsible-vertical.toggle-sidebar .main-logo > span {
+        @apply duration-500 lg:opacity-100;
+    }
+    .collapsible-vertical.toggle-sidebar .sidebar .collapse-icon {
+        @apply flex rotate-0;
+    }
+    .collapsible-vertical .sidebar:hover .collapse-icon {
+        @apply flex rotate-180;
+    }
+    .collapsible-vertical .sidebar ul > h2 span {
+        @apply hidden whitespace-nowrap;
+    }
+    .collapsible-vertical .sidebar ul > h2 svg {
+        @apply block;
+    }
+    .collapsible-vertical .sidebar:hover ul > h2 span,
+    .collapsible-vertical.toggle-sidebar .sidebar ul > h2 span {
+        @apply inline;
+    }
+    .collapsible-vertical .sidebar:hover ul > h2 svg,
+    .collapsible-vertical.toggle-sidebar .sidebar ul > h2 svg {
+        @apply hidden;
+    }
+
+    /* boxed-layout */
+    .boxed-layout {
+        @apply mx-auto max-w-[1400px];
+    }
+
+    .boxed-layout.vertical .sidebar,
+    .boxed-layout.collapsible-vertical .sidebar {
+        @apply overflow-hidden lg:ltr:left-auto lg:rtl:right-auto;
+    }
+
+    .boxed-layout.vertical.toggle-sidebar .sidebar {
+        @apply lg:w-0;
+    }
+
+    /* Buttons */
     .btn {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        border: 1px solid transparent;
-        border-radius: 0.375rem;
-        padding: 0.5rem 1.25rem;
-        font-family: var(--font-titre);
-        font-size: var(--text-base);
-        font-weight: 600;
-        outline: none;
-        transition: box-shadow 0.3s, background-color 0.2s, color 0.2s;
+        @apply relative flex items-center justify-center rounded-md border px-5 py-2 text-sm font-semibold shadow-[0_10px_20px_-10px] outline-none transition duration-300 hover:shadow-none;
     }
-
-    .btn:disabled,
+    .btn-lg {
+        @apply px-7 py-2.5 text-base;
+    }
+    .btn-sm {
+        @apply px-2.5 py-1.5 text-xs;
+    }
     .btn[disabled] {
-        cursor: not-allowed;
-        opacity: 0.6;
+        @apply cursor-not-allowed opacity-60;
     }
 
     .btn-primary {
-        border-color: var(--color-primary);
-        background-color: var(--color-primary);
-        color: var(--color-white);
-        box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--color-primary) 60%, transparent);
+        @apply border-primary bg-primary text-white shadow-primary/60;
+    }
+    .btn-outline-primary {
+        @apply border-primary text-primary shadow-none hover:bg-primary hover:text-white;
     }
 
-    .btn-outline {
-        border-color: var(--color-primary);
-        color: var(--color-primary);
+    .btn-secondary {
+        @apply border-secondary bg-secondary text-white shadow-secondary/60;
+    }
+    .btn-outline-secondary {
+        @apply border-secondary text-secondary shadow-none hover:bg-secondary hover:text-white;
     }
 
-    .btn-outline:hover {
-        background-color: var(--color-primary);
-        color: var(--color-white);
+    .btn-success {
+        @apply border-success bg-success text-white shadow-success/60;
     }
-
-    .btn-neutre {
-        border-color: var(--color-white-light);
-        background-color: var(--color-white);
-        color: var(--color-black);
-    }
-
-    .btn-neutre:hover {
-        background-color: var(--color-white-light);
+    .btn-outline-success {
+        @apply border-success text-success shadow-none hover:bg-success hover:text-white;
     }
 
     .btn-danger {
-        border-color: var(--color-danger);
-        background-color: var(--color-danger);
-        color: var(--color-white);
-        box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--color-danger) 60%, transparent);
+        @apply border-danger bg-danger text-white shadow-danger/60;
+    }
+    .btn-outline-danger {
+        @apply border-danger text-danger shadow-none hover:bg-danger hover:text-white;
     }
 
-    .btn:hover {
-        box-shadow: none;
+    .btn-warning {
+        @apply border-warning bg-warning text-white shadow-warning/60;
+    }
+    .btn-outline-warning {
+        @apply border-warning text-warning shadow-none hover:bg-warning hover:text-white;
     }
 
-    /*
-    | Les badges. Toujours un LIBELLÉ, jamais une pastille de couleur seule :
-    | « Actif » et « Inactif » se lisent, y compris en noir et blanc et par
-    | quelqu'un qui distingue mal les couleurs.
-    */
+    .btn-info {
+        @apply border-info bg-info text-white shadow-info/60;
+    }
+    .btn-outline-info {
+        @apply border-info text-info shadow-none hover:bg-info hover:text-white;
+    }
+
+    .btn-dark {
+        @apply border-dark bg-dark text-white shadow-dark/60;
+    }
+
+    .btn-outline-dark {
+        @apply border-dark text-dark shadow-none hover:bg-dark hover:text-white;
+    }
+
+    .btn-gradient {
+        @apply bg-gradient-to-r from-[#EF1262] to-[#4361EE] hover:to-[#EF1262] hover:from-[#4361EE] text-white;
+    }
+
+    /* Badge */
     .badge {
-        display: inline-block;
-        border-radius: 0.25rem;
-        padding: 0.125rem 0.5rem;
-        font-family: var(--font-titre);
-        font-size: var(--text-xs);
-        font-weight: 600;
-        letter-spacing: 0.04em;
+        @apply relative my-1 rounded border border-transparent px-2 py-0.5 text-xs font-semibold text-white;
+    }
+    .badge-outline-primary {
+        @apply border-primary text-primary hover:bg-primary-light dark:hover:bg-primary dark:hover:text-white-light;
+    }
+    .badge-outline-secondary {
+        @apply border-secondary text-secondary hover:bg-secondary-light dark:hover:bg-secondary dark:hover:text-white-light;
+    }
+    .badge-outline-success {
+        @apply border-success text-success hover:bg-success-light dark:hover:bg-success dark:hover:text-white-light;
+    }
+    .badge-outline-danger {
+        @apply border-danger text-danger hover:bg-danger-light dark:hover:bg-danger dark:hover:text-white-light;
+    }
+    .badge-outline-warning {
+        @apply border-warning text-warning hover:bg-warning-light dark:hover:bg-warning dark:hover:text-white-light;
+    }
+    .badge-outline-info {
+        @apply border-info text-info hover:bg-info-light dark:hover:bg-info dark:hover:text-white-light;
+    }
+    .badge-outline-dark {
+        @apply border-dark text-dark hover:bg-dark-light dark:hover:bg-dark dark:hover:text-white-light;
     }
 
-    .badge-succes {
-        background-color: var(--color-success-light);
-        color: var(--color-success-texte);
+    /* Form */
+    .form-input,
+    .form-textarea,
+    .form-select,
+    .form-multiselect {
+        @apply w-full rounded-md border border-[#e0e6ed] bg-white px-4 py-2 text-sm font-semibold text-black !outline-none focus:border-primary focus:ring-transparent dark:border-[#17263c] dark:bg-[#121e32] dark:text-white-dark dark:focus:border-primary;
     }
 
-    .badge-alerte {
-        background-color: var(--color-warning-light);
-        color: var(--color-warning-texte);
+    .form-input-lg,
+    .form-textarea-lg,
+    .form-select-lg,
+    .form-multiselect-lg {
+        @apply py-2.5 text-base;
+    }
+    .form-input-sm,
+    .form-textarea-sm,
+    .form-select-sm,
+    .form-multiselect-sm {
+        @apply py-1.5 text-xs;
+    }
+    label {
+        @apply mb-1.5 block font-semibold;
+    }
+    [dir='rtl'] select {
+        background-position: left 0.5rem center;
     }
 
-    .badge-neutre {
-        background-color: var(--color-black-light);
-        color: var(--color-black);
+    .has-error .form-input,
+    .has-error .form-textarea,
+    .has-error .form-select,
+    .has-error .form-multiselect,
+    .has-error .multiselect__tags {
+        @apply border-danger bg-danger/[0.08] text-danger placeholder-danger/70 focus:border-danger;
+    }
+    .has-error .form-label,
+    .has-error .form-help,
+    .has-error .form-icon,
+    .has-error .multiselect__placeholder {
+        @apply text-danger;
+    }
+    .has-error .multiselect__input {
+        @apply bg-[#F7ECF0] !placeholder-danger/70;
+    }
+    .has-error .multiselect__tags:hover,
+    .has-error .form-checkbox {
+        @apply border-danger;
     }
 
-    /* Les tableaux de données. */
-    .tableau {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
+    .has-success .form-input,
+    .has-success .form-textarea,
+    .has-success .form-select,
+    .has-success .form-multiselect,
+    .has-success .multiselect__tags {
+        @apply border-success bg-success/[0.08] text-success placeholder-success/70 focus:border-success;
+    }
+    .has-success .form-label,
+    .has-success .form-help,
+    .has-success .form-icon,
+    .has-success .multiselect__placeholder {
+        @apply text-success;
+    }
+    .has-success .multiselect__input {
+        @apply bg-[#F7ECF0] !placeholder-success/70;
+    }
+    .has-success .multiselect__tags:hover {
+        @apply border-success;
     }
 
-    .tableau thead th {
-        border-bottom: 1px solid var(--color-white-light);
-        padding: 0.625rem 0.75rem;
-        font-family: var(--font-titre);
-        font-size: var(--text-xs);
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--color-white-dark);
+    /* checkbox & radio */
+    .form-radio,
+    .form-checkbox {
+        @apply h-5 w-5 cursor-pointer rounded border-2 border-[#e0e6ed] bg-transparent text-primary !shadow-none !outline-none !ring-0 !ring-offset-0 checked:bg-[length:90%_90%] disabled:cursor-not-allowed disabled:bg-[#eee] ltr:mr-1.5 rtl:ml-1.5
+      dark:border-[#253b5c] dark:checked:border-transparent dark:disabled:bg-[#1b2e4b];
     }
 
-    .tableau tbody td {
-        border-bottom: 1px solid var(--color-white-light);
-        padding: 0.75rem;
-        vertical-align: top;
+    .form-checkbox.outline-primary:checked {
+        @apply border-primary bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%234361ee' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-secondary:checked {
+        @apply border-secondary bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%23805dca' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-success:checked {
+        @apply border-success bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%2300ab55' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-danger:checked {
+        @apply border-danger bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%23e7515a' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-warning:checked {
+        @apply border-warning bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%23e2a03f' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-info:checked {
+        @apply border-info bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%232196f3' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
+    }
+    .form-checkbox.outline-dark:checked {
+        @apply border-dark bg-transparent;
+        background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='%233b3f5c' xmlns='http://www.w3.org/2000/svg'><path d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/></svg>");
     }
 
-    .tableau tbody tr:hover {
-        background-color: color-mix(in srgb, var(--color-white-light) 25%, transparent);
+    .form-radio {
+        @apply rounded-full;
     }
 
-    /* Les champs de formulaire. */
-    .champ {
-        width: 100%;
-        border: 1px solid var(--color-white-light);
-        border-radius: 0.375rem;
-        background-color: var(--color-white);
-        padding: 0.5rem 0.75rem;
-        font-size: var(--text-base);
+    .form-radio.outline-primary:checked {
+        @apply border-primary bg-transparent bg-none;
+    }
+    .form-radio.outline-secondary:checked {
+        @apply border-secondary bg-transparent bg-none;
+    }
+    .form-radio.outline-success:checked {
+        @apply border-success bg-transparent bg-none;
+    }
+    .form-radio.outline-danger:checked {
+        @apply border-danger bg-transparent bg-none;
+    }
+    .form-radio.outline-warning:checked {
+        @apply border-warning bg-transparent bg-none;
+    }
+    .form-radio.outline-info:checked {
+        @apply border-info bg-transparent bg-none;
+    }
+    .form-radio.outline-dark:checked {
+        @apply border-dark bg-transparent bg-none;
     }
 
-    .champ:focus {
-        border-color: var(--color-primary);
-        outline: none;
+    /* dropdown */
+    .dropdown {
+        @apply relative;
+    }
+    .dropdown > button {
+        @apply flex;
+    }
+    .dropdown ul {
+        @apply absolute z-10 mt-1 min-w-[120px] rounded bg-white p-0 py-2 text-black shadow dark:bg-[#1b2e4b] dark:text-white-dark;
+        /* @apply my-1 min-w-[120px] rounded bg-white p-0 py-2 shadow dark:bg-[#1b2e4b]; */
+    }
+    .dropdown ul li > a,
+    .dropdown ul li > button {
+        @apply flex items-center px-4 py-2 hover:bg-primary/10 hover:text-primary;
     }
 
-    .etiquette {
-        display: block;
-        margin-bottom: 0.25rem;
-        font-family: var(--font-titre);
-        font-size: var(--text-sm);
-        font-weight: 600;
-        color: var(--color-black);
+    .dropdown ul li > button {
+        @apply w-full;
+    }
+
+    /* tables */
+    .table-responsive {
+        @apply overflow-auto;
+    }
+    table {
+        @apply w-full !border-collapse;
+    }
+    table thead tr,
+    table tfoot tr {
+        @apply border-b-0 !bg-[#f6f8fa]  dark:!bg-[#1a2941];
+    }
+    table thead tr th,
+    table tfoot tr th,
+    table tbody tr td {
+        @apply py-3 px-4 ltr:text-left rtl:text-right;
+    }
+    table thead tr th,
+    table tfoot tr th {
+        @apply font-semibold;
+    }
+    table tbody tr {
+        @apply border-b !border-white-light/40 dark:!border-[#191e3a];
+    }
+    table.table-hover tbody tr {
+        @apply hover:!bg-white-light/20 dark:hover:!bg-[#1a2941]/40;
+    }
+    table.table-striped tbody tr:nth-child(odd) {
+        @apply !bg-white-light/20 dark:!bg-[#1a2941]/40;
+    }
+
+    table.dataTable-table tbody tr th,
+    table.dataTable-table tbody tr td {
+        @apply border-b border-white-light/40 py-3 px-4 ltr:text-left rtl:text-right dark:border-[#191e3a];
+    }
+    table.dataTable-table tbody tr:last-child td {
+        @apply border-b-0;
+    }
+
+    /* code hightlight */
+    pre {
+        direction: ltr;
     }
 }
 
-/*
-|==============================================================================
-| La colonne de séance — l'élément signature
-|==============================================================================
-|
-| Conservée telle quelle : le template ne s'applique pas ici. Les trois états
-| sont définis ICI et nulle part ailleurs — le composant Blade et le template
-| Alpine posent tous deux un `data-etat`, et n'ont donc aucune façon de
-| diverger.
-|
-| La hauteur vient de `--minutes` : chaque séquence occupe une hauteur
-| proportionnelle à sa durée officielle. La colonne est une échelle, pas une
-| liste — le facilitateur y descend physiquement au fil de la séance.
-|
-*/
-
-@layer components {
-    .bloc-sequence {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 0.5rem;
-        min-height: calc(var(--minutes, 10) * 0.42rem);
-        padding: 0.75rem;
-        border: 3px solid var(--color-noir);
-        border-radius: var(--radius-net);
-        background-color: var(--color-blanc);
-        color: var(--color-noir);
-        text-align: left;
-        width: 100%;
-    }
-
-    .bloc-sequence[data-etat='passee'] {
-        background-color: var(--color-noir);
-        color: var(--color-blanc);
-    }
-
-    .bloc-sequence[data-etat='en_cours'] {
-        background-color: var(--color-jaune);
-        color: var(--color-noir);
-    }
-
-    .bloc-sequence[data-etat='a_venir'] {
-        background-color: var(--color-blanc);
-        color: var(--color-noir);
-    }
-
-    /*
-    | Les états du pointage.
-    |
-    | Quatre états, trois couleurs : ce sont les FORMES qui portent la
-    | distinction, jamais la couleur seule. Chaque pastille porte aussi un
-    | libellé écrit.
-    |
-    |     à pointer = contour pointillé   (rien n'a encore été dit)
-    |     présent   = pastille noire pleine
-    |     absent    = contour plein
-    |     binôme    = pastille jaune, marquée d'un trait de liaison
-    */
-    .pastille {
-        display: block;
-        width: 2.75rem;
-        height: 2.75rem;
-        border: 3px solid var(--color-noir);
-        border-radius: 9999px;
-        background-color: var(--color-blanc);
-    }
-
-    .pastille[data-etat='a_pointer'] {
-        border-style: dashed;
-        border-color: var(--color-gris-texte);
-    }
-
-    .pastille[data-etat='present'] {
-        background-color: var(--color-noir);
-    }
-
-    .pastille[data-etat='rattrape_binome'] {
-        background-color: var(--color-jaune);
-    }
+/* perfect scrollbar */
+.ps__rail-y > .ps__thumb-y,
+.ps__rail-y > .ps__thumb-y {
+    @apply !w-1.5 !bg-[#DDDDDD] dark:!bg-[#2d334c];
+}
+.ps .ps__rail-x:hover,
+.ps .ps__rail-y:hover,
+.ps .ps__rail-x:focus,
+.ps .ps__rail-y:focus,
+.ps .ps__rail-x.ps--clicking,
+.ps .ps__rail-y.ps--clicking {
+    @apply !opacity-60;
+}
+.ps .ps__rail-x:hover,
+.ps .ps__rail-y:hover,
+.ps .ps__rail-x:focus,
+.ps .ps__rail-y:focus,
+.ps .ps__rail-x.ps--clicking,
+.ps .ps__rail-y.ps--clicking {
+    @apply !bg-transparent;
 }
 
-/*
-| Intitulé court en capitales. Archivo n'étant chargé qu'en largeur normale,
-| l'effet « Expanded » est obtenu par l'interlettrage — approximation assumée.
-*/
-@utility intitule {
-    font-family: var(--font-titre);
-    font-weight: 600;
-    font-size: var(--text-sm);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    line-height: 1.2;
+/* swal2 */
+.swal2-container .swal2-close {
+    @apply text-white hover:text-dark-light focus:shadow-none;
 }
 
-/*
-| La bande du brise-glace : l'outil se retire, la salle prend le relais.
-| Aucun contrôle, aucun chronomètre. Cette rupture visuelle porte la doctrine
-| du projet — tout ne se numérise pas.
-*/
-@utility bande-brise-glace {
-    background-color: var(--color-jaune);
-    color: var(--color-noir);
-    font-family: var(--font-titre);
-    font-weight: 700;
+.swal2-container .swal2-popup.swal2-toast {
+    @apply bg-dark py-2.5 px-5;
+}
+
+.swal2-popup.swal2-toast .swal2-title,
+.swal2-container .swal2-popup.swal2-toast .swal2-html-container {
+    @apply text-white;
+}
+.swal2-container .swal2-popup.swal2-toast.color-primary {
+    @apply bg-primary;
+}
+
+.swal2-container .swal2-popup.swal2-toast.color-secondary {
+    @apply bg-secondary;
+}
+
+.swal2-container .swal2-popup.swal2-toast.color-warning {
+    @apply bg-warning;
+}
+.swal2-container .swal2-popup.swal2-toast.color-info {
+    @apply bg-info;
+}
+.swal2-container .swal2-popup.swal2-toast.color-danger {
+    @apply bg-danger;
+}
+.swal2-container .swal2-popup.swal2-toast.color-success {
+    @apply bg-success;
+}
+
+/* apex chart */
+.apexcharts-canvas .apexcharts-tooltip.apexcharts-theme-light,
+.apexcharts-canvas .apexcharts-xaxistooltip.apexcharts-theme-light {
+    box-shadow: none;
+    @apply border-[#050717cc] bg-[#050717cc] text-white;
+}
+
+.apexcharts-canvas .apexcharts-xaxistooltip-bottom:before,
+.apexcharts-canvas .apexcharts-xaxistooltip-bottom:after {
+    @apply border-b-[#050717cc];
+}
+
+.apexcharts-canvas .apexcharts-tooltip-series-group.apexcharts-active {
+    @apply text-white;
+}
+
+.apexcharts-canvas .apexcharts-tooltip.apexcharts-theme-light .apexcharts-tooltip-title {
+    @apply border-dark bg-[#060818];
+}
+
+.apexcharts-legend-series {
+    @apply ltr:!mr-2 rtl:!ml-2;
+}
+
+.dark .apexcharts-title-text {
+    fill: #e0e6ed;
+}
+
+.dark .apexcharts-canvas .apexcharts-text.apexcharts-xaxis-label,
+.dark .apexcharts-canvas .apexcharts-text.apexcharts-yaxis-label {
+    fill: #e0e6ed;
+}
+
+.dark .apexcharts-canvas .apexcharts-text,
+.dark .apexcharts-canvas .apexcharts-text {
+    fill: #e0e6ed;
+}
+
+.dark .apexcharts-canvas .apexcharts-legend-text {
+    color: #e0e6ed !important;
+}
+
+.dark .apexcharts-canvas .apexcharts-radialbar-track.apexcharts-track .apexcharts-radialbar-area {
+    stroke: #191e3a;
+}
+.dark .apexcharts-canvas .apexcharts-series-markers.apexcharts-series-bubble .apexcharts-marker {
+    stroke: #191e3a;
+}
+
+.dark .apexcharts-canvas .apexcharts-pie-label,
+.dark .apexcharts-canvas .apexcharts-datalabel,
+.dark .apexcharts-canvas .apexcharts-datalabel-label,
+.dark .apexcharts-canvas .apexcharts-datalabel-value {
+    fill: #bfc9d4;
+}
+
+.dark .apexcharts-canvas .apexcharts-tooltip.apexcharts-theme-dark {
+    box-shadow: none;
+}
+
+.apexcharts-canvas .apexcharts-legend-marker {
+    @apply ltr:!mr-1.5 rtl:ml-1.5 rtl:!mr-0;
+}
+
+[dir='rtl'] .apexcharts-tooltip-marker {
+    @apply mr-0 ml-2.5;
 }

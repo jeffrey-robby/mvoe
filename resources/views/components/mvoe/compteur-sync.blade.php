@@ -12,8 +12,8 @@
 <span x-data="compteurSync({{ $demo === null ? 'null' : (int) $demo }})"
       x-bind:class="total > 0
         ? 'bg-jaune text-noir'
-        : 'border border-blanc/30 text-blanc'"
-      class="inline-flex h-9 items-center gap-2 rounded-net px-2.5"
+        : 'bg-white-light/40 dark:bg-dark/40 text-white-dark'"
+      class="flex h-9 items-center gap-2 rounded-full px-3"
       role="status"
       x-bind:aria-label="libelle">
 

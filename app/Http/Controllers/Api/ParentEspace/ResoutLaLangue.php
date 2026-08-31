@@ -31,7 +31,13 @@ trait ResoutLaLangue
             }
         }
 
-        return $request->user()->langue ?? Langue::parDefaut();
+        /*
+        | Les contenus se lisent sans compte. Un parent connecté a une langue
+        | attachée à son dossier ; un visiteur anonyme n'en a pas, et repart
+        | sur la langue par défaut du programme tant qu'il n'en a pas choisi
+        | une — auquel cas elle arrive par `?langue=`, traitée plus haut.
+        */
+        return $request->user('sanctum')?->langue ?? Langue::parDefaut();
     }
 
     /** Le format d'une langue partout ou l'API en rend une. */

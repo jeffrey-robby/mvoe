@@ -54,6 +54,9 @@ class AssistantController extends Controller
             'texte' => ['required_without:situation_id', 'nullable', 'string', 'max:500'],
             'situation_id' => ['required_without:texte', 'nullable', 'integer'],
             'langue' => ['nullable', 'string'],
+            // Un visiteur sans compte peut désigner son arrondissement pour
+            // qu'on lui propose un facilitateur proche en cas de refus.
+            'arrondissement_id' => ['nullable', 'integer'],
         ]);
 
         $texte = isset($donnees['situation_id'])
@@ -98,11 +101,22 @@ class AssistantController extends Controller
 
     private function refus(ResultatAppariement $resultat, Request $request): array
     {
-        $arrondissementId = $request->user()->cohorte->arrondissement_id;
+        /*
+        | L'arrondissement d'où proposer un contact.
+        |
+        | Un parent connecté a une cohorte, donc un arrondissement. Un visiteur
+        | anonyme n'en a pas : il peut en désigner un depuis l'annuaire, sinon
+        | on élargit. Dans tous les cas on répond quelqu'un — un refus sans
+        | contact serait une impasse, et c'est précisément le moment où la
+        | personne a besoin d'un humain.
+        */
+        $arrondissementId = $request->user('sanctum')?->cohorte?->arrondissement_id
+            ?? $request->integer('arrondissement_id') ?: null;
 
         // Un contact humain, jamais un signalement : le système affiche un
         // numéro, il n'alerte personne et ne déclenche aucune procédure.
-        $contacts = Facilitateur::where('arrondissement_id', $arrondissementId)
+        $contacts = Facilitateur::query()
+            ->when($arrondissementId, fn ($q) => $q->where('arrondissement_id', $arrondissementId))
             ->with('arrondissement:id,libelle')
             ->get()
             ->filter->estActif();
@@ -118,7 +132,9 @@ class AssistantController extends Controller
             'score' => round($resultat->score, 3),
             'seuil' => $resultat->seuil,
             'message' => "Je n'ai pas de réponse validée à cette question. Un facilitateur pourra vous aider.",
-            'contacts' => $contacts->map(fn (Facilitateur $f) => [
+            // Trois noms, pas trente-neuf. Une liste d'un arrondissement entier
+            // n'est plus un contact, c'est un annuaire — et il en existe un.
+            'contacts' => $contacts->take(3)->map(fn (Facilitateur $f) => [
                 'nom' => $f->nom,
                 'telephone' => $f->telephone,
                 'arrondissement' => $f->arrondissement->libelle,

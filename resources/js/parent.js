@@ -1,4 +1,4 @@
-import { api, ErreurHorsLigne } from './api.js';
+import { api, ErreurHorsLigne, messageDeConnexion } from './api.js';
 
 /*
 |------------------------------------------------------------------------------
@@ -27,6 +27,7 @@ import { api, ErreurHorsLigne } from './api.js';
 
 const CLE = 'mvoe.parent';
 const CLE_LECTURE = 'mvoe.parent.lecture';
+const CLE_LANGUE = 'mvoe.parent.langue';
 
 export const sessionParent = {
     lire() {
@@ -47,12 +48,31 @@ export const sessionParent = {
         return this.lire()?.jeton ?? null;
     },
     langue() {
-        return this.lire()?.langue ?? 'fr';
+        // Un visiteur sans compte a quand meme choisi une langue. Elle vit
+        // dans `localStorage` : c'est une preference d'affichage, pas une
+        // donnee personnelle, et la reperdre a chaque onglet serait absurde.
+        if (this.lire()?.langue) return this.lire().langue;
+
+        try {
+            return localStorage.getItem(CLE_LANGUE) ?? 'fr';
+        } catch {
+            return 'fr';
+        }
     },
     definirLangue(langue) {
         const s = this.lire();
 
         if (s) this.ouvrir({ ...s, langue });
+
+        try {
+            localStorage.setItem(CLE_LANGUE, langue);
+        } catch {
+            // Navigation privee : la langue vaut pour la visite.
+        }
+    },
+    /** Y a-t-il un compte ouvert ? La lecture n'en demande pas. */
+    connecte() {
+        return Boolean(this.jeton());
     },
 };
 
@@ -118,13 +138,16 @@ export function jouer(url) {
     lecteurCourant.play().catch(() => {});
 }
 
+/*
+| Les contenus se lisent SANS COMPTE.
+|
+| Le code d'un parent ne sert qu'a ce qui s'attache a lui : repondre a la
+| question de la semaine, et recevoir les contenus dans la langue inscrite a
+| son dossier. Tout le reste — unites, feuilleton, annuaire, assistant — est
+| ouvert, parce qu'un contenu produit par le ministere pour etre lu n'a aucune
+| raison d'etre reserve a ceux qui sont deja inscrits.
+*/
 function exigerUneSession() {
-    if (!sessionParent.jeton()) {
-        window.location.href = '/parent';
-
-        return false;
-    }
-
     return true;
 }
 
@@ -160,10 +183,27 @@ export function entreeParent() {
             this.langues = await chargerLesLangues();
         },
 
+        /*
+        | La langue se choisit d'abord, puis la VOIE : consulter, ou ouvrir sa
+        | session. Le code n'est pas un peage — il ne sert qu'a ce qui
+        | s'attache a une personne. Proposer la lecture en premier evite
+        | qu'une mere sans code reparte en croyant que ce n'est pas pour elle.
+        */
         choisirLangue(code) {
             this.langue = code;
+            sessionParent.definirLangue(code);
+            this.etape = 'acces';
+            jouer(`/audio/interface/langue-${code}.wav`);
+        },
+
+        consulterSansCompte() {
+            sessionParent.definirLangue(this.langue);
+            window.location.href = '/parent/accueil';
+        },
+
+        ouvrirLeCode() {
             this.etape = 'code';
-            jouer(`/audio/interface/entree-code-${code}.wav`);
+            jouer(`/audio/interface/entree-code-${this.langue}.wav`);
         },
 
         ecouterLangue(code) {
@@ -218,10 +258,10 @@ export function entreeParent() {
                     return;
                 }
 
-                this.erreur =
-                    e instanceof ErreurHorsLigne
-                        ? "Pas de réseau pour l'instant."
-                        : 'Ce code parent et ce code à 4 chiffres ne vont pas ensemble.';
+                this.erreur = messageDeConnexion(e, {
+                    horsLigne: "Pas de réseau pour l'instant.",
+                    refus: 'Ce code parent et ce code à 4 chiffres ne vont pas ensemble.',
+                });
             } finally {
                 this.occupe = false;
             }
@@ -286,17 +326,32 @@ function baseParent() {
         },
 
         /** Règle 3 : un bouton de sortie visible sur chaque écran. */
+        connecte: sessionParent.connecte(),
+
         async sortir() {
-            await api.fermerSession(sessionParent.jeton()).catch(() => null);
-            sessionParent.fermer();
+            if (sessionParent.connecte()) {
+                await api.fermerSession(sessionParent.jeton()).catch(() => null);
+                sessionParent.fermer();
+            }
+
             window.location.href = '/parent';
         },
 
         signaler(e) {
             if (e?.statut === 401) {
-                // La session est courte et ne se renouvelle pas.
+                /*
+                | Le jeton a expire — il est court et ne se renouvele jamais,
+                | parce que le telephone est souvent partage au sein du foyer.
+                | On oublie la session et on CONTINUE : la lecture ne demande
+                | pas de compte, et ejecter quelqu'un vers un ecran de code
+                | pour lui reprendre ce qu'il etait en train d'ecouter serait
+                | une punition, pas une mesure de securite.
+                */
                 sessionParent.fermer();
-                window.location.href = '/parent';
+                this.connecte = false;
+                this.erreur = null;
+
+                if (typeof this.recharger === 'function') this.recharger();
 
                 return;
             }
@@ -573,11 +628,6 @@ export function annuaireParent() {
         resultat: null,
         chargement: true,
 
-        /** Accessible sans session : la sortie n'a alors pas lieu d'être. */
-        get connecte() {
-            return Boolean(sessionParent.jeton());
-        },
-
         async init() {
             try {
                 this.arrondissements = (await api.arrondissements()).arrondissements;
@@ -655,10 +705,27 @@ export function questionsSemaine() {
             return this.questions[this.rang] ?? null;
         },
 
+        /*
+        | Repondre ECRIT quelque chose au nom d'un parent : cela demande un
+        | compte. Les questions se LISENT sans, et l'explication du programme
+        | reste accessible — c'est elle qui a de la valeur, pas le fait d'avoir
+        | clique. On ne mure donc personne : on dit ce qui manque, et on montre
+        | quand meme la reponse du programme.
+        */
         async repondre(option) {
             if (this.explication) return;
 
             this.choix = option.id;
+
+            if (! this.connecte) {
+                this.explication = {
+                    explication: this.question.explication ?? null,
+                    reference: this.question.reference ?? null,
+                    anonyme: true,
+                };
+
+                return;
+            }
 
             try {
                 const reponse = await api.repondreQuestion(
