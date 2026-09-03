@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Minproff;
 
+use App\Enums\Modalite;
 use App\Enums\StatutValidation;
 use App\Http\Controllers\Controller;
 use App\Models\Langue;
@@ -64,8 +65,12 @@ class BibliothequeController extends Controller
                 'par_statut' => $this->parStatut(ModuleFormation::query()),
             ],
 
-            // La file : ce qui attend une décision humaine.
+            // La file : ce qui attend une décision humaine. Les DEUX
+            // catalogues y figurent — une réalisation créée en brouillon qui
+            // n'apparaîtrait nulle part resterait en base sans jamais atteindre
+            // un parent, et personne ne saurait pourquoi.
             'file_de_validation' => $this->file($modules),
+            'realisations_en_attente' => $this->realisationsEnAttente(),
         ]);
     }
 
@@ -177,6 +182,35 @@ class BibliothequeController extends Controller
                 'sections' => $m->sections->count(),
                 'statut_validation' => $m->statut_validation->value,
                 'statut_libelle' => $m->statut_validation->libelle(),
+            ])->values()->all();
+    }
+
+    /**
+     * Les réalisations qui attendent une relecture.
+     *
+     * Elles ne sont pas mêlées aux modules de formation : les deux catalogues
+     * ne servent pas le même public, et une réalisation se relit dans SA
+     * langue — souvent par quelqu'un d'autre que le relecteur des modules.
+     */
+    private function realisationsEnAttente(): array
+    {
+        return Realisation::with('langue', 'unite.module', 'unite.sequence')
+            ->where('statut_validation', '!=', StatutValidation::Valide->value)
+            ->get()
+            ->map(fn (Realisation $r) => [
+                'id' => $r->id,
+                'langue' => $r->langue?->nom(),
+                'langue_code' => $r->langue?->code,
+                'modalite' => $r->modalite->value,
+                'modalite_libelle' => $r->modalite === Modalite::Audio
+                    ? 'Audio' : 'Texte + pictogrammes',
+                'titre' => $r->titre,
+                'reference' => $r->unite?->reference(),
+                'message_cle' => $r->unite?->message_cle,
+                // Dit au relecteur ce qu'il va réellement pouvoir écouter.
+                'audio_disponible' => $r->aUnAudio(),
+                'statut_validation' => $r->statut_validation->value,
+                'statut_libelle' => $r->statut_validation->libelle(),
             ])->values()->all();
     }
 

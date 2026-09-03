@@ -7,6 +7,7 @@ import {
     enteteDelegation,
     parametres,
     rapport,
+    redactionContenus,
     registre,
     signalements,
     tableauDeBord,
@@ -25,6 +26,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('enregistrerFacilitateur', enregistrerFacilitateur);
     Alpine.data('signalements', signalements);
     Alpine.data('bibliotheque', bibliotheque);
+    Alpine.data('redactionContenus', redactionContenus);
     Alpine.data('campagnes', campagnes);
     Alpine.data('canaux', canaux);
     Alpine.data('rapport', rapport);

@@ -49,7 +49,12 @@ class UniteDigitale extends Model
     {
         return $this->realisations
             ->firstWhere(fn (Realisation $r) => $r->langue_id === $langue->id
-                && $r->modalite === $modalite);
+                && $r->modalite === $modalite
+                // Un contenu non valide ne peut pas etre diffuse. Le filtre est
+                // ICI, pas dans chaque appelant : l'espace parent, l'assistant
+                // et le paquet passent tous les trois par cette methode, et un
+                // seul oubli suffirait a envoyer un brouillon sur le terrain.
+                && $r->estDiffusable());
     }
 
     /**
@@ -63,6 +68,7 @@ class UniteDigitale extends Model
     public function languesDisponibles(): \Illuminate\Support\Collection
     {
         return $this->realisations
+            ->filter(fn (Realisation $r) => $r->estDiffusable())
             ->map(fn (Realisation $r) => $r->langue)
             ->filter()
             ->unique('id')

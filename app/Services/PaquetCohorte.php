@@ -43,7 +43,13 @@ class PaquetCohorte
 
         $modules = Module::where('curriculum_version_id', $cohorte->curriculum_version_id)
             ->ordonnes()
-            ->with(['sequences' => fn ($q) => $q->ordonnees(), 'sequences.unites.realisations'])
+            ->with([
+                'sequences' => fn ($q) => $q->ordonnees(),
+                // Diffusables SEULEMENT. Le paquet part hors ligne dans un
+                // telephone : un brouillon qui y entre n'en ressort plus, et
+                // personne ne saura quelle cohorte l'a recu.
+                'sequences.unites.realisations' => fn ($q) => $q->diffusables(),
+            ])
             ->get();
 
         return [

@@ -349,6 +349,10 @@ export function bibliotheque() {
         contenusParents: null,
         contenusFacilitateurs: null,
         file: [],
+        // La file des REALISATIONS. Elle est distincte de celle des modules :
+        // une realisation se relit dans SA langue, souvent par quelqu'un
+        // d'autre que le relecteur des modules de formation.
+        realisationsEnAttente: [],
         chargement: true,
         occupe: false,
         erreur: null,
@@ -373,6 +377,7 @@ export function bibliotheque() {
                 this.contenusParents = d.contenus_parents;
                 this.contenusFacilitateurs = d.contenus_facilitateurs;
                 this.file = d.file_de_validation;
+                this.realisationsEnAttente = d.realisations_en_attente ?? [];
             } catch (e) {
                 traiterErreur(this, e);
             } finally {
@@ -387,6 +392,21 @@ export function bibliotheque() {
 
             try {
                 await api.validerModule(sessionDelegation.jeton(), code, statut);
+                await this.charger();
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        async validerUneRealisation(id, statut) {
+            if (this.occupe) return;
+
+            this.occupe = true;
+
+            try {
+                await api.validerRealisation(sessionDelegation.jeton(), id, statut);
                 await this.charger();
             } catch (e) {
                 traiterErreur(this, e);
@@ -967,6 +987,249 @@ export function enregistrerFacilitateur() {
             this.email = '';
             this.typeJuridique = '';
             this.organisation = '';
+        },
+    };
+}
+
+/**
+ * L'écriture des contenus, côté ministère.
+ *
+ * L'écran est délibérément en DEUX volets, pas en un formulaire universel : le
+ * catalogue des parents et celui des facilitateurs ne servent pas le même
+ * public, et les confondre ferait croire qu'un module de formation touche des
+ * parents.
+ *
+ * Rien de ce qui se saisit ici ne part sur le terrain : tout entre en
+ * brouillon, et ressort par la file de validation de la bibliothèque.
+ */
+export function redactionContenus() {
+    return {
+        volet: 'parent',
+
+        referentiel: null,
+        chargement: true,
+        occupe: false,
+        erreur: null,
+        erreurs: {},
+        message: null,
+
+        // Le catalogue parent, en deux temps : l'unité d'abord, ses
+        // réalisations ensuite. Une unité sans réalisation n'est pas une
+        // erreur — c'est un texte écrit qui attend d'être traduit et enregistré.
+        unite: { module_id: '', sequence_id: '', message_cle: '' },
+        uniteCreee: null,
+
+        realisation: {
+            langue_id: '', modalite: 'audio', titre: '',
+            contenu_texte: '', fichier_audio: '', pictogrammes: '',
+        },
+
+        // Le catalogue facilitateur, en deux temps aussi : le module, puis ses
+        // sections.
+        moduleFormation: {
+            code: '', titre: '', type: 'remise_a_niveau',
+            objectif: '', duree_minutes: 20, ordre: '',
+        },
+        moduleCree: null,
+
+        section: { titre: '', contenu_texte: '', fichier_audio: '', duree_minutes: 10 },
+        sections: [],
+
+        async init() {
+            if (!exigerUneSession(this)) return;
+
+            try {
+                this.referentiel = await api.referentielContenus(sessionDelegation.jeton());
+                this.moduleFormation.ordre = this.referentiel.ordre_suivant;
+            } catch (e) {
+                traiterErreur(this, e);
+            } finally {
+                this.chargement = false;
+            }
+        },
+
+        /* --- Catalogue parent -------------------------------------------- */
+
+        /** Les séquences du module choisi. Le curriculum vient de la base. */
+        get sequencesDuModule() {
+            return this.referentiel?.modules
+                ?.find((m) => String(m.id) === String(this.unite.module_id))
+                ?.sequences ?? [];
+        },
+
+        /** Changer de module invalide la séquence : elle appartient à l'autre. */
+        moduleChange() {
+            this.unite.sequence_id = '';
+        },
+
+        get peutCreerUneUnite() {
+            return this.unite.module_id !== ''
+                && this.unite.sequence_id !== ''
+                && this.unite.message_cle.trim() !== '';
+        },
+
+        async creerUneUnite() {
+            if (!this.peutCreerUneUnite || this.occupe) return;
+
+            await this.envoyer(async () => {
+                const d = await api.creerUnite(sessionDelegation.jeton(), {
+                    module_id: Number(this.unite.module_id),
+                    sequence_id: Number(this.unite.sequence_id),
+                    message_cle: this.unite.message_cle.trim(),
+                });
+
+                this.uniteCreee = d.unite;
+                this.message = 'Unité enregistrée. Chargez maintenant une réalisation.';
+            });
+        },
+
+        /**
+         * Une réalisation porte un texte, un audio, ou les deux — jamais rien.
+         * Le serveur le refuse aussi : cette vérification n'est là que pour
+         * éviter un aller-retour inutile.
+         */
+        get peutChargerUneRealisation() {
+            return this.uniteCreee !== null
+                && this.realisation.langue_id !== ''
+                && (this.realisation.contenu_texte.trim() !== ''
+                    || this.realisation.fichier_audio.trim() !== '');
+        },
+
+        async chargerUneRealisation() {
+            if (!this.peutChargerUneRealisation || this.occupe) return;
+
+            await this.envoyer(async () => {
+                const pictos = this.realisation.pictogrammes
+                    .split(',').map((p) => p.trim()).filter(Boolean);
+
+                const d = await api.chargerRealisation(
+                    sessionDelegation.jeton(), this.uniteCreee.id, {
+                        langue_id: Number(this.realisation.langue_id),
+                        modalite: this.realisation.modalite,
+                        titre: this.realisation.titre.trim() || null,
+                        contenu_texte: this.realisation.contenu_texte.trim() || null,
+                        fichier_audio: this.realisation.fichier_audio.trim() || null,
+                        pictogrammes: pictos.length ? pictos : null,
+                    },
+                );
+
+                this.uniteCreee = d.unite;
+                this.realisation.titre = '';
+                this.realisation.contenu_texte = '';
+                this.realisation.fichier_audio = '';
+                this.realisation.pictogrammes = '';
+                this.message = 'Réalisation chargée, en brouillon. '
+                    + 'Elle attend sa validation dans la bibliothèque.';
+            });
+        },
+
+        /** Repartir sur une unité vierge, sans quitter l'écran. */
+        nouvelleUnite() {
+            this.uniteCreee = null;
+            this.unite.message_cle = '';
+            this.message = null;
+        },
+
+        /* --- Catalogue facilitateur --------------------------------------- */
+
+        get peutCreerUnModule() {
+            return this.moduleFormation.code.trim() !== ''
+                && this.moduleFormation.titre.trim() !== ''
+                && this.moduleFormation.objectif.trim() !== ''
+                && Number(this.moduleFormation.duree_minutes) > 0;
+        },
+
+        async creerUnModule() {
+            if (!this.peutCreerUnModule || this.occupe) return;
+
+            await this.envoyer(async () => {
+                const d = await api.creerModuleFormation(sessionDelegation.jeton(), {
+                    code: this.moduleFormation.code.trim(),
+                    titre: this.moduleFormation.titre.trim(),
+                    type: this.moduleFormation.type,
+                    objectif: this.moduleFormation.objectif.trim(),
+                    duree_minutes: Number(this.moduleFormation.duree_minutes),
+                    ordre: this.moduleFormation.ordre === ''
+                        ? null : Number(this.moduleFormation.ordre),
+                });
+
+                this.moduleCree = d.module;
+                this.sections = [];
+                this.message = 'Module enregistré. Ajoutez ses sections.';
+            });
+        },
+
+        get peutAjouterUneSection() {
+            return this.moduleCree !== null
+                && this.section.titre.trim() !== ''
+                && this.section.contenu_texte.trim() !== ''
+                && Number(this.section.duree_minutes) > 0;
+        },
+
+        async ajouterUneSection() {
+            if (!this.peutAjouterUneSection || this.occupe) return;
+
+            await this.envoyer(async () => {
+                const d = await api.ajouterSection(
+                    sessionDelegation.jeton(), this.moduleCree.code, {
+                        titre: this.section.titre.trim(),
+                        contenu_texte: this.section.contenu_texte.trim(),
+                        fichier_audio: this.section.fichier_audio.trim() || null,
+                        duree_minutes: Number(this.section.duree_minutes),
+                    },
+                );
+
+                this.sections.push(d.section);
+                this.moduleCree = d.module;
+                this.section.titre = '';
+                this.section.contenu_texte = '';
+                this.section.fichier_audio = '';
+                this.message = 'Section ajoutée.';
+            });
+        },
+
+        nouveauModule() {
+            this.moduleCree = null;
+            this.sections = [];
+            this.moduleFormation.code = '';
+            this.moduleFormation.titre = '';
+            this.moduleFormation.objectif = '';
+            this.moduleFormation.ordre = this.referentiel?.ordre_suivant ?? '';
+            this.message = null;
+        },
+
+        /* ------------------------------------------------------------------ */
+
+        /**
+         * L'enveloppe commune des envois.
+         *
+         * Un 422 est REMONTÉ champ par champ : dire « une erreur est survenue »
+         * à quelqu'un qui vient d'écrire une unité de curriculum lui fait
+         * recommencer sa saisie sans savoir ce qui clochait.
+         */
+        async envoyer(action) {
+            this.occupe = true;
+            this.erreur = null;
+            this.erreurs = {};
+            this.message = null;
+
+            try {
+                await action();
+            } catch (e) {
+                if (e.statut === 422) {
+                    this.erreurs = e.corps?.errors ?? {};
+                    this.erreur = e.corps?.message ?? 'Vérifiez les champs signalés.';
+                } else {
+                    traiterErreur(this, e);
+                }
+            } finally {
+                this.occupe = false;
+            }
+        },
+
+        /** Le premier message d'erreur d'un champ, ou null. */
+        erreurDe(champ) {
+            return this.erreurs[champ]?.[0] ?? null;
         },
     };
 }

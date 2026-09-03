@@ -67,6 +67,8 @@ Route::view('/superviseur/campagnes', 'superviseur.campagnes')
     ->name('superviseur.campagnes');
 Route::view('/superviseur/bibliotheque', 'superviseur.bibliotheque')
     ->name('superviseur.bibliotheque');
+Route::view('/superviseur/contenus', 'superviseur.contenus')
+    ->name('superviseur.contenus');
 Route::view('/superviseur/canaux', 'superviseur.canaux')->name('superviseur.canaux');
 Route::view('/superviseur/rapport', 'superviseur.rapport')->name('superviseur.rapport');
 Route::view('/superviseur/parametres', 'superviseur.parametres')->name('superviseur.parametres');

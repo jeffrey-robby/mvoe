@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\LangueController;
 use App\Http\Controllers\Api\Minproff\BibliothequeController;
 use App\Http\Controllers\Api\Minproff\CampagneController;
 use App\Http\Controllers\Api\Minproff\CanalController;
+use App\Http\Controllers\Api\Minproff\RedactionController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\Superviseur\CohorteController as CohorteSuperviseurController;
 use App\Http\Controllers\Api\Superviseur\EnregistrementFacilitateurController;
@@ -140,6 +141,24 @@ Route::middleware(['auth:sanctum', 'abilities:superviseur'])
         Route::patch('bibliotheque/modules/{code}', [BibliothequeController::class, 'valider']);
         Route::post('bibliotheque/langues', [BibliothequeController::class, 'langue']);
         Route::patch('bibliotheque/langues/{id}', [BibliothequeController::class, 'langue']);
+
+        /*
+         * La REDACTION des contenus. La bibliotheque savait valider et retirer,
+         * elle ne savait pas ecrire : le catalogue venait entierement des
+         * seeders, donc l'equipe technique produisait le curriculum national.
+         *
+         * Rien de ce qui est cree ici ne naît valide. La creation depose en
+         * brouillon ; la validation reste un geste distinct, dans la file.
+         */
+        Route::get('contenus/referentiel', [RedactionController::class, 'referentiel']);
+        Route::post('contenus/modules-formation', [RedactionController::class, 'moduleFormation']);
+        Route::post('contenus/modules-formation/{code}/sections',
+            [RedactionController::class, 'sectionFormation']);
+        Route::post('contenus/unites', [RedactionController::class, 'unite']);
+        Route::post('contenus/unites/{unite}/realisations',
+            [RedactionController::class, 'realisation']);
+        Route::patch('contenus/realisations/{realisation}',
+            [RedactionController::class, 'validerLaRealisation']);
 
         // Les campagnes se LISENT à tous les niveaux, ne se créent qu'au
         // national, et s'accusent en réception à tous les autres.

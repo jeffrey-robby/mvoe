@@ -13,12 +13,17 @@
 
         <div class="pt-5">
 
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold dark:text-white-light">Bibliothèque</h2>
-                <p class="text-white-dark mt-1 max-w-prose">
-                    Les contenus du programme et les langues dans lesquelles ils existent.
-                    Rien ne part sur le terrain avant d'être validé ici.
-                </p>
+            <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold dark:text-white-light">Bibliothèque</h2>
+                    <p class="text-white-dark mt-1 max-w-prose">
+                        Les contenus du programme et les langues dans lesquelles ils existent.
+                        Rien ne part sur le terrain avant d'être validé ici.
+                    </p>
+                </div>
+                <a href="/superviseur/contenus" class="btn btn-primary whitespace-nowrap">
+                    Enregistrer un contenu
+                </a>
             </div>
 
             <div x-show="chargement && ! contenusParents" class="panel mb-6">
@@ -140,6 +145,58 @@
                                     </div>
                                 </div>
                             </template>
+                        </div>
+                    </div>
+
+                    <div class="panel mb-6" x-show="realisationsEnAttente.length > 0">
+                        <div class="flex items-center justify-between mb-5">
+                            <div>
+                                <h5 class="font-semibold text-lg dark:text-white-light">
+                                    Réalisations en attente de relecture
+                                </h5>
+                                <p class="text-white-dark mt-1 max-w-prose">
+                                    Ce qu'un parent recevra dans sa langue. Une réalisation en
+                                    brouillon n'entre ni dans un paquet de cohorte, ni dans
+                                    l'espace parent.
+                                </p>
+                            </div>
+                            <span class="badge bg-warning shadow-md"
+                                  x-text="realisationsEnAttente.length"></span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="ltr:rounded-l-md rtl:rounded-r-md">Unité</th>
+                                        <th>Langue</th>
+                                        <th>Modalité</th>
+                                        <th>Audio</th>
+                                        <th class="ltr:rounded-r-md rtl:rounded-l-md"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="r in realisationsEnAttente" x-bind:key="r.id">
+                                        <tr class="text-white-dark">
+                                            <td>
+                                                <p class="text-black dark:text-white font-semibold"
+                                                   x-text="r.titre ?? r.message_cle"></p>
+                                                <p class="chiffre text-xs" x-text="r.reference"></p>
+                                            </td>
+                                            <td class="text-black dark:text-white" x-text="r.langue"></td>
+                                            <td x-text="r.modalite_libelle"></td>
+                                            <td x-text="r.audio_disponible ? 'Chargé' : 'Manquant'"></td>
+                                            <td class="text-right whitespace-nowrap">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                        x-on:click="validerUneRealisation(r.id, 'valide')"
+                                                        x-bind:disabled="occupe">
+                                                    Valider
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

@@ -124,6 +124,32 @@ export const api = {
             methode: id ? 'PATCH' : 'POST', jeton, corps: donnees,
         }),
 
+    /* --- La redaction des contenus, cote ministere --------------------- */
+
+    referentielContenus: (jeton) =>
+        appeler('superviseur/contenus/referentiel', { jeton }),
+
+    creerModuleFormation: (jeton, corps) =>
+        appeler('superviseur/contenus/modules-formation', { methode: 'POST', jeton, corps }),
+
+    ajouterSection: (jeton, code, corps) =>
+        appeler(`superviseur/contenus/modules-formation/${code}/sections`, {
+            methode: 'POST', jeton, corps,
+        }),
+
+    creerUnite: (jeton, corps) =>
+        appeler('superviseur/contenus/unites', { methode: 'POST', jeton, corps }),
+
+    chargerRealisation: (jeton, uniteId, corps) =>
+        appeler(`superviseur/contenus/unites/${uniteId}/realisations`, {
+            methode: 'POST', jeton, corps,
+        }),
+
+    validerRealisation: (jeton, id, statut) =>
+        appeler(`superviseur/contenus/realisations/${id}`, {
+            methode: 'PATCH', jeton, corps: { statut_validation: statut },
+        }),
+
     campagnes: (jeton) => appeler('superviseur/campagnes', { jeton }),
 
     creerCampagne: (jeton, corps) =>
